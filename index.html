@@ -126,6 +126,7 @@
   </div>
 </noscript>
 <div id="fatalError" style="display:none; background:#9B2C2C; color:#fff; padding:16px; font-family:sans-serif; font-size:.9rem; text-align:center;"></div>
+<div id="loadingOverlay" style="position:fixed; inset:0; background:#FBF7EC; z-index:999; display:flex; align-items:center; justify-content:center; font-family:sans-serif; font-size:1rem; color:#2B2621;">جارٍ تحميل البيانات...</div>
 
 <header>
   <h1>نظام إدارة الدرجات</h1>
@@ -374,6 +375,8 @@ async function load(){
   if(!initFirebase()){
     loaded = true;
     renderAll();
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.style.display = 'none';
     return;
   }
   try{
@@ -389,9 +392,11 @@ async function load(){
   if(!state.attendance) state.attendance = {};
   loaded = true;
   renderAll();
+  const overlay = document.getElementById('loadingOverlay');
+  if(overlay) overlay.style.display = 'none';
 }
 async function save(){
-  if(!firebaseReady) return;
+  if(!firebaseReady || !loaded) return;
   try{
     await dbRef.set(state);
   }catch(e){
