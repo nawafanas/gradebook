@@ -1,0 +1,2151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة الدرجات</title>
+<meta name="color-scheme" content="light">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<style>
+  html{background:#FBF7EC;}
+  :root{
+    --paper:#FBF7EC; --line:#DCD3B8; --ink:#2B2621; --ink-soft:#6B6255;
+    --red:#9B2C2C; --gold:#B08A2E; --green:#3F6B4A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Tajawal',sans-serif; color:var(--ink);
+    background:var(--paper); min-height:100vh;
+  }
+  header{
+    background:linear-gradient(135deg, var(--ink) 0%, #3a322a 100%); color:var(--paper);
+    padding:18px 22px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;
+    box-shadow:0 3px 12px rgba(0,0,0,.2);
+  }
+  header h1{font-family:'Amiri',serif; font-size:1.6rem; margin:0; letter-spacing:.3px;}
+  header .stage-tag{
+    background:var(--red); padding:5px 16px; border-radius:20px; font-size:.85rem; font-weight:700;
+    box-shadow:0 2px 6px rgba(155,44,44,.4);
+  }
+  nav{
+    display:flex; gap:2px; background:#fff; border-bottom:2px solid var(--ink);
+    overflow-x:auto; box-shadow:0 2px 6px rgba(0,0,0,.05);
+  }
+  nav button{
+    flex:1; min-width:110px; background:transparent; border:none; padding:13px 8px;
+    font-family:inherit; font-size:.9rem; font-weight:700; color:var(--ink-soft);
+    cursor:pointer; border-bottom:3px solid transparent; transition:color .15s ease, background .15s ease;
+  }
+  nav button:hover{background:rgba(155,44,44,.05); color:var(--ink);}
+  nav button.active{color:var(--red); border-bottom-color:var(--red);}
+  main{max-width:1100px; margin:0 auto; padding:20px 14px 70px;}
+  .card{
+    background:rgba(255,255,255,.65); border:1px solid var(--line); border-radius:12px;
+    padding:20px; margin-bottom:20px; box-shadow:0 3px 10px rgba(43,38,33,.06);
+    transition:box-shadow .2s ease;
+  }
+  .card:hover{box-shadow:0 5px 16px rgba(43,38,33,.09);}
+  .card h2{font-family:'Amiri',serif; font-size:1.25rem; margin:0 0 14px; color:var(--ink);}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+  .field{display:flex; flex-direction:column; gap:4px;}
+  .field label{font-size:.78rem; color:var(--ink-soft);}
+  input, select{
+    font-family:inherit; font-size:.9rem; padding:9px 12px; border:1px solid var(--line);
+    border-bottom:2px solid var(--ink); border-radius:8px; background:#fffdf7; color:var(--ink);
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  textarea{font-family:inherit; font-size:.9rem; padding:9px 12px; border:1px solid var(--line); border-bottom:2px solid var(--ink); border-radius:8px; background:#fffdf7; color:var(--ink); min-height:80px; resize:vertical; width:100%;}
+  textarea:focus{outline:none; border-bottom-color:var(--red);}
+  .tag.notice{background:#f7ecd8; color:var(--gold);}
+  input:focus, select:focus{outline:none; border-bottom-color:var(--red); box-shadow:0 0 0 3px rgba(155,44,44,.08);}
+  button.btn{
+    font-family:inherit; cursor:pointer; border:none; border-radius:8px; padding:10px 18px;
+    font-size:.85rem; font-weight:700; background:var(--ink); color:var(--paper);
+    transition:background .15s ease, transform .1s ease, box-shadow .15s ease;
+    box-shadow:0 2px 6px rgba(43,38,33,.15);
+  }
+  button.btn:hover{background:var(--red); box-shadow:0 3px 10px rgba(155,44,44,.25);}
+  button.btn:active{transform:scale(.97);}
+  button.btn.small{padding:6px 12px; font-size:.78rem;}
+  button.link{background:none; border:none; color:var(--ink-soft); text-decoration:underline; font-size:.78rem; cursor:pointer;}
+  button.link:hover{color:var(--red);}
+  table{width:100%; border-collapse:collapse; margin-top:8px; font-size:.85rem; border-radius:8px; overflow:hidden;}
+  th, td{border:1px solid var(--line); padding:7px 9px; text-align:center;}
+  th{background:#EFE9D8; font-size:.78rem; color:var(--ink-soft); font-weight:700;}
+  tbody tr:hover{background:rgba(155,44,44,.03);}
+  td input{width:64px; padding:5px; text-align:center;}
+  .tag{display:inline-block; padding:2px 8px; border-radius:12px; font-size:.75rem; font-weight:700;}
+  .tag.pass{background:#e3efe5; color:var(--green);}
+  .tag.warn{background:#f7ecd8; color:var(--gold);}
+  .tag.fail{background:#f6e0e0; color:var(--red);}
+  .empty{text-align:center; color:var(--ink-soft); padding:30px; font-size:.9rem;}
+  .pill-list{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .pill{
+    background:#fff; border:1px solid var(--line); border-radius:20px; padding:5px 12px;
+    font-size:.82rem; display:flex; align-items:center; gap:8px;
+  }
+  .pill button{background:none; border:none; color:var(--red); cursor:pointer; font-weight:700;}
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--ink);
+    color:var(--paper); padding:10px 22px; border-radius:20px; font-size:.85rem; opacity:0;
+    transition:opacity .3s, bottom .3s; pointer-events:none; z-index:50;
+  }
+  .toast.show{opacity:1; bottom:48px;}
+  .save-status{position:fixed; left:10px; bottom:8px; z-index:70; font-size:.78rem; font-weight:700; padding:5px 13px; border-radius:20px;
+    background:#3a342d; color:#fff; border:1px solid rgba(255,255,255,.3); box-shadow:0 2px 8px rgba(0,0,0,.25); max-width:calc(100vw - 20px); line-height:1.4;}
+  .save-status.ok{background:#2f6b45; border-color:#59a577;}
+  .save-status.saving{background:#8a6d1f; border-color:#c9a64a;}
+  .save-status.warn{background:#a05a00; border-color:#e0993a;}
+  .save-status.err{background:#9B2C2C; border-color:#d96a6a; animation:savepulse 1.4s ease-in-out infinite;}
+  @keyframes savepulse{0%,100%{box-shadow:0 2px 8px rgba(0,0,0,.25);} 50%{box-shadow:0 0 0 5px rgba(155,44,44,.35);}}
+  @media print{ .save-status{display:none !important;} }
+  .note-cell{font-size:.75rem; color:var(--ink-soft); max-width:160px;}
+  .stage-picker{display:flex; gap:10px; flex-wrap:wrap;}
+  .stage-btn{
+    padding:14px 22px; border:2px solid var(--line); border-radius:10px; cursor:pointer;
+    font-weight:700; background:#fff; font-family:'Amiri',serif; font-size:1.05rem;
+  }
+  .stage-btn.selected{border-color:var(--red); color:var(--red); background:#fdf1f1;}
+  header .btn-ghost{
+    background:transparent; border:1px solid var(--paper); color:var(--paper);
+    padding:6px 12px; border-radius:6px; font-size:.78rem; cursor:pointer; font-family:inherit;
+  }
+  header .btn-ghost:hover{background:var(--paper); color:var(--ink);}
+  .idcards-grid{display:flex; flex-wrap:wrap; gap:18px; margin-top:12px;}
+  .idcard-pair{display:flex; gap:10px; flex-wrap:wrap;}
+  .idcard{
+    width:300px; height:180px; border-radius:14px; position:relative; overflow:hidden;
+    box-shadow:0 3px 10px rgba(43,38,33,.15); font-family:'Tajawal',sans-serif;
+  }
+  .idcard-front{
+    background:linear-gradient(160deg, #fffdf7 0%, #F3EEE0 100%);
+    border:1px solid var(--line); display:flex; flex-direction:column;
+  }
+  .idcard-front .band{
+    background:var(--ink); color:var(--paper); padding:8px 12px; font-size:.72rem; font-weight:700;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .idcard-front .band .stagepill{background:var(--red); padding:2px 8px; border-radius:10px; font-size:.65rem;}
+  .idcard-front .body{display:flex; gap:12px; padding:10px 12px; flex:1; align-items:center;}
+  .idcard-front .photo{
+    width:64px; height:64px; border-radius:10px; object-fit:cover; background:#ddd6c4;
+    border:2px solid #fff; box-shadow:0 1px 4px rgba(0,0,0,.15); flex-shrink:0;
+  }
+  .idcard-front .photo-placeholder{
+    width:64px; height:64px; border-radius:10px; background:#e5ded0; display:flex; align-items:center;
+    justify-content:center; color:var(--ink-soft); font-size:1.6rem; flex-shrink:0; border:2px solid #fff;
+  }
+  .idcard-front .info .name{font-family:'Amiri',serif; font-weight:700; font-size:1.05rem; color:var(--ink); margin-bottom:4px;}
+  .idcard-front .info .line{font-size:.75rem; color:var(--ink-soft); margin-bottom:2px;}
+  .idcard-back{
+    background:linear-gradient(160deg, #2B2621 0%, #3a322a 100%); color:var(--paper);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:14px;
+  }
+  .idcard-back .backlabel{font-size:.7rem; color:#c9bfae; letter-spacing:.5px;}
+  .idcard-back .creds{font-size:.85rem; text-align:center; line-height:1.9;}
+  .idcard-back .creds b{color:#fff;}
+  .idcard-back .qr-wrap{margin:0;}
+  .idcard-back .qr-wrap img, .idcard-back .qr-wrap canvas{border:5px solid #fff; border-radius:4px;}
+  .portal-box{max-width:380px; margin:0 auto;}
+  .portal-result{max-width:600px; margin:16px auto 0;}
+  .portal-result table{margin-top:10px;}
+  .release-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 16px; border:1px solid var(--line); border-radius:8px; margin-bottom:10px;
+    background:rgba(255,255,255,.5);
+  }
+  .release-row .rlabel{font-weight:700;}
+  .release-row .rformula{font-weight:400; font-size:.76rem; color:var(--ink-soft); margin-top:3px; line-height:1.5;}
+  .release-row.derived{background:#F3EEE0; border-right:4px solid var(--gold);}
+  .release-row .rstatus{font-size:.8rem; padding:3px 10px; border-radius:12px; font-weight:700;}
+  .release-row .rstatus.on{background:#e3efe5; color:var(--green);}
+  .release-row .rstatus.off{background:#f6e0e0; color:var(--red);}
+  .toggle-switch{position:relative; width:46px; height:26px; flex-shrink:0;}
+  .toggle-switch input{opacity:0; width:0; height:0;}
+  .toggle-slider{
+    position:absolute; cursor:pointer; inset:0; background:#ccc; border-radius:26px; transition:.2s;
+  }
+  .toggle-slider::before{
+    content:""; position:absolute; height:20px; width:20px; right:3px; bottom:3px;
+    background:white; border-radius:50%; transition:.2s;
+  }
+  .toggle-switch input:checked + .toggle-slider{background:var(--green);}
+  .toggle-switch input:checked + .toggle-slider::before{transform:translateX(-20px);}
+  @media print{
+    header, nav, .no-print{display:none !important;}
+    body{background:#fff;}
+    .card{border:none; padding:0;}
+    .idcards-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  /* ---------- A4 result sheets ---------- */
+  .a4-scroll{overflow-x:auto; padding:6px 0 20px;}
+  .a4-wrap{display:flex; flex-direction:column; align-items:center; gap:16px; min-width:min-content;}
+  .a4-page{background:#fff; color:#000; width:210mm; height:296mm; box-sizing:border-box; padding:7mm; overflow:hidden;
+    box-shadow:0 2px 14px rgba(0,0,0,.2); flex-shrink:0; font-family:'Tajawal',sans-serif;}
+  .a4-page.land{width:297mm; height:209mm;}
+  .a4-frame{height:100%; box-sizing:border-box; border:2.5px double #2B2621; padding:4mm 5mm; display:flex; flex-direction:column;}
+  .a4-head{text-align:center; margin-bottom:2mm;}
+  .a4-head .school{font-family:'Amiri',serif; font-size:21pt; font-weight:700; line-height:1.25; color:#2B2621;}
+  .a4-head .sub{font-size:10pt; color:#555;}
+  .a4-title{background:#2B2621; color:#fff; text-align:center; padding:2mm 0; font-weight:700; font-size:13.5pt; margin:2mm 0; border-radius:2px; letter-spacing:.3px;}
+  .a4-info{display:flex; justify-content:space-between; gap:6mm; font-size:10pt; border:1px solid #2B2621; padding:1.5mm 4mm; margin-bottom:2.5mm; background:#FBF7EC;}
+  table.a4-table{width:100%; border-collapse:collapse; margin:0; border-radius:0 !important; overflow:visible !important;}
+  .a4-table th, .a4-table td{border:1px solid #2B2621; padding:1.2mm 1mm; text-align:center; line-height:1.3;}
+  .a4-table th{background:#E8E0CC; font-weight:700;}
+  .a4-table td.name{text-align:right; white-space:nowrap; padding-right:2mm;}
+  .a4-table td.note{text-align:right; font-size:.88em;}
+  .a4-table tbody tr:nth-child(even) td{background:#FAF7EE;}
+  .a4-table td.low{color:#B00020; font-weight:700;}
+  .a4-table td.exm{background:#DDEBDD !important; color:#2E6B3E; font-weight:700;}
+  .a4-table td.tot{font-weight:700; background:#F3EEE0 !important;}
+  .a4-table td.res-ok{color:#2E6B3E; font-weight:700;}
+  .a4-table td.res-warn{color:#B26A00; font-weight:700;}
+  .a4-table td.res-fail{color:#B00020; font-weight:700;}
+  .a4-table tfoot td{font-weight:700; background:#E8E0CC;}
+  .a4-foot{margin-top:auto;}
+  .a4-sigs{display:flex; justify-content:space-around; gap:10mm; margin:0 0 4mm;}
+  .a4-sigs div{width:30%; text-align:center; border-top:1px solid #000; padding-top:1mm; margin-top:14mm; font-weight:700; font-size:10pt;}
+  .a4-pageno{display:flex; justify-content:space-between; font-size:8.5pt; color:#555; border-top:1px dashed #999; padding-top:1.5mm;}
+  /* ---------- student certificate ---------- */
+  .cert-inner{height:100%; box-sizing:border-box; border:1px solid #2B2621; padding:4mm 5mm; display:flex; flex-direction:column;}
+  .cert-top{display:grid; grid-template-columns:1fr 1.5fr 1fr; align-items:start; gap:4mm; margin-bottom:2mm;}
+  .cert-top .rt{font-size:9.5pt; line-height:1.75; text-align:center; font-weight:700;}
+  .cert-top .ctr{text-align:center;}
+  .cert-top .ctr .school{font-family:'Amiri',serif; font-size:19pt; font-weight:700; line-height:1.25;}
+  .cert-top .ctr .yr{font-size:10pt; color:#555;}
+  .cert-photo{width:21mm; height:27mm; border:1px solid #2B2621; overflow:hidden; background:#F4F0E4; display:flex; align-items:center; justify-content:center; font-size:8pt; color:#777; justify-self:end;}
+  .cert-photo img{width:100%; height:100%; object-fit:cover;}
+  .cert-logo{display:block; height:17mm; max-width:42mm; object-fit:contain; margin:0 auto 1mm;}
+  .cert-inner .a4-table th, .cert-inner .a4-table td{padding:var(--cp,1.6mm) 0.8mm;}
+  .cert-inner .a4-table td.note{font-size:.86em; text-align:right; padding-right:2mm;}
+  .cert-title{background:#2B2621; color:#fff; text-align:center; padding:2.2mm 0; font-size:15pt; font-weight:700; margin:2mm 0 3mm; border-radius:2px; letter-spacing:.3px;}
+  table.cert-info{width:100%; border-collapse:collapse; margin-bottom:3mm; font-size:10.5pt; border-radius:0 !important; overflow:visible !important;}
+  .cert-info td{border:1px solid #2B2621; padding:1.8mm 3mm; text-align:right; background:#FBF7EC;}
+  .cert-result{display:grid; grid-template-columns:1.2fr 1fr 1fr; gap:3mm; margin-top:4mm;}
+  .cert-box{border:1px solid #2B2621; padding:2mm 3mm; text-align:center; background:#FBF7EC;}
+  .cert-box .lbl{font-size:9pt; color:#555;}
+  .cert-box .val{font-size:15pt; font-weight:700; line-height:1.4;}
+  .cert-box .val.ok{color:#2E6B3E;} .cert-box .val.warn{color:#B26A00;} .cert-box .val.fail{color:#B00020;} .cert-box .val.na{color:#555; font-size:12pt;}
+  .cert-notes{border:1px solid #2B2621; padding:2mm 3mm; margin-top:3mm; font-size:10pt; min-height:11mm;}
+  .cert-notes b{margin-left:2mm;}
+  .cert-sigs{display:flex; justify-content:center; gap:34mm; align-items:flex-end; margin-top:auto; padding-top:6mm;}
+  .cert-sigs .sg{width:62mm; text-align:center; border-top:1px solid #000; padding-top:1mm; font-weight:700; font-size:10pt; margin-top:12mm;}
+  .cert-sigs .stamp{width:26mm; height:26mm; border:1.5px dashed #888; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#888; font-size:9pt; text-align:center;}
+  .cert-date{display:flex; justify-content:space-between; font-size:8.5pt; color:#555; border-top:1px dashed #999; padding-top:1.5mm; margin-top:3mm;}
+  @media print{
+    body[data-print="cert"] main{padding:0 !important; max-width:none !important; margin:0 !important;}
+  }
+  @media print{
+    *{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    html, body{background:#fff !important;}
+    body[data-print="period"] main{padding:0 !important; max-width:none !important; margin:0 !important;}
+    body[data-print="period"] #resultsReportWrap{display:none !important;}
+    body[data-print="results"] #monthlyReportWrap{display:none !important;}
+    body[data-print] #fatalError, body[data-print] .toast{display:none !important;}
+    .a4-scroll{overflow:visible !important; padding:0 !important;}
+    .a4-wrap{display:block !important; min-width:0;}
+    .a4-page{box-shadow:none !important; margin:0 !important; page-break-after:always; break-after:page;}
+    .a4-page:last-child{page-break-after:auto; break-after:auto;}
+  }
+</style>
+</head>
+<body>
+<noscript>
+  <div style="padding:40px 20px; text-align:center; font-family:sans-serif; background:#FBF7EC; color:#2B2621;">
+    هذا البرنامج يحتاج تفعيل الجافاسكربت (JavaScript) في المتصفح ليعمل. الرجاء تفعيله من إعدادات المتصفح ثم إعادة فتح الملف.
+  </div>
+</noscript>
+<div id="fatalError" style="display:none; background:#9B2C2C; color:#fff; padding:16px; font-family:sans-serif; font-size:.9rem; text-align:center;"></div>
+<div id="loadingOverlay" style="position:fixed; inset:0; background:#FBF7EC; z-index:999; display:flex; align-items:center; justify-content:center; font-family:sans-serif; font-size:1rem; color:#2B2621;">جارٍ تحميل البيانات...</div>
+
+<header>
+  <h1>نظام إدارة الدرجات</h1>
+  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <div class="stage-tag" id="stageTag">لم تُحدد المرحلة</div>
+    <button class="btn-ghost" id="btnExport">تصدير البيانات</button>
+    <button class="btn-ghost" id="btnImport">استيراد البيانات</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none;">
+  </div>
+</header>
+
+<nav>
+  <button data-tab="settings" class="active">الإعدادات</button>
+  <button data-tab="students">الطلاب</button>
+  <button data-tab="teachers">المدرسون</button>
+  <button data-tab="grades">الدرجات</button>
+  <button data-tab="attendance">الغياب</button>
+  <button data-tab="notices">التبليغات والمخالفات</button>
+  <button data-tab="release">اعتماد النتائج</button>
+  <button data-tab="reports">التقارير</button>
+  <button data-tab="certs">الشهادات</button>
+  <button data-tab="idcards">الهوية والباركود</button>
+  <button data-tab="search">بحث</button>
+  <button data-tab="portal">دخول الطالب/ولي الأمر</button>
+</nav>
+
+<main>
+
+  <section id="tab-settings">
+    <div class="card">
+      <h2>اسم المدرسة</h2>
+      <p style="font-size:.8rem; color:var(--ink-soft); margin-top:-8px;">يظهر هذا الاسم أعلى بطاقة هوية الطالب.</p>
+      <div class="row">
+        <div class="field" style="flex:1;"><label>اسم المدرسة</label><input type="text" id="schoolNameInput" placeholder="مثال: مدرسة النور الثانوية" style="width:100%;"></div>
+        <div class="field"><label>العام الدراسي (اختياري)</label><input type="text" id="academicYearInput" placeholder="مثال: 2026 - 2027"></div>
+        <div class="field"><label>المديرية (اختياري)</label><input type="text" id="directorateInput" placeholder="مثال: مديرية تربية بغداد / الكرخ الأولى"></div>
+        <button class="btn" id="btnSaveSchoolName">حفظ</button>
+      </div>
+      <div class="row" style="margin-top:12px; align-items:center;">
+        <div class="field"><label>شعار المدرسة (يظهر على الشهادات)</label><input type="file" accept="image/*" id="schoolLogoInput"></div>
+        <img id="schoolLogoPreview" alt="" style="display:none; height:56px; max-width:120px; object-fit:contain; border:1px solid var(--line); border-radius:6px; background:#fff; padding:3px;">
+        <button class="btn small" id="btnRemoveLogo" type="button">إزالة الشعار</button>
+      </div>
+      <p style="font-size:.78rem; color:var(--ink-soft); margin-top:6px;">اختر الصورة ثم اضغط "حفظ" لتثبيت الشعار.</p>
+    </div>
+
+    <div class="card">
+      <h2>رابط بوابة أولياء الأمور</h2>
+      <p style="font-size:.8rem; color:var(--ink-soft); margin-top:-8px;">هذا الرابط يُستخدم داخل رمز QR على بطاقات الطلاب حتى يفتح مباشرة عند المسح بأي كاميرا.</p>
+      <div class="row">
+        <div class="field" style="flex:1;"><label>الرابط</label><input type="text" id="portalUrlInput" placeholder="https://username.github.io/gradebook/portal.html" style="width:100%;"></div>
+        <button class="btn" id="btnSavePortalUrl">حفظ الرابط</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>المرحلة الدراسية</h2>
+      <div class="stage-picker" id="stagePicker"></div>
+    </div>
+
+    <div class="card">
+      <h2>المواد الدراسية</h2>
+      <form class="row" id="subjectForm">
+        <div class="field"><label>اسم المادة</label><input type="text" id="subjectName" placeholder="مثال: الرياضيات" required></div>
+        <button type="submit" class="btn">إضافة المادة</button>
+      </form>
+      <div class="pill-list" id="subjectsList"></div>
+    </div>
+
+    <div class="card">
+      <h2>الشعب</h2>
+      <form class="row" id="sectionForm">
+        <div class="field"><label>اسم الشعبة</label><input type="text" id="sectionName" placeholder="مثال: أ" required></div>
+        <div class="field"><label>الصف</label><select id="sectionGrade" required></select></div>
+        <button type="submit" class="btn">إضافة الشعبة</button>
+      </form>
+      <div class="pill-list" id="sectionsList"></div>
+    </div>
+  </section>
+
+  <section id="tab-students" style="display:none;">
+    <div class="card">
+      <h2>إضافة طالب</h2>
+      <form class="row" id="studentForm">
+        <div class="field"><label>الشعبة</label><select id="stuSection" required></select></div>
+        <div class="field"><label>اسم الطالب</label><input type="text" id="stuName" required></div>
+        <div class="field"><label>رقم القيد</label><input type="text" id="stuReg"></div>
+        <div class="field"><label>الرقم الامتحاني</label><input type="text" id="stuExam"></div>
+        <div class="field"><label>اسم المستخدم (اختياري)</label><input type="text" id="stuUser"></div>
+        <div class="field"><label>كلمة المرور (اختياري)</label><input type="text" id="stuPass"></div>
+        <div class="field"><label>صورة الطالب (اختياري)</label><input type="file" accept="image/*" id="stuPhoto"></div>
+        <button type="submit" class="btn">إضافة</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>عرض حسب الشعبة</h2>
+      <div class="field" style="margin-bottom:10px;"><label>الشعبة</label><select id="viewSection"></select></div>
+      <div id="studentsTableWrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-teachers" style="display:none;">
+    <div class="card">
+      <h2>إضافة مدرّس</h2>
+      <form class="row" id="teacherForm">
+        <div class="field"><label>اسم المدرّس</label><input type="text" id="teacherName" required></div>
+        <div class="field"><label>اسم المستخدم (اختياري)</label><input type="text" id="teacherUser"></div>
+        <div class="field"><label>كلمة المرور (اختياري)</label><input type="text" id="teacherPass"></div>
+        <button type="submit" class="btn">إضافة</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>المدرّسون وتكليفاتهم</h2>
+      <p style="font-size:.8rem; color:var(--ink-soft); margin-top:-8px;">حدد لكل مدرّس المواد والشعب التي يدرّسها ليقدر ينشر تحضيرات لها فقط.</p>
+      <div id="teachersList"></div>
+    </div>
+  </section>
+
+  <section id="tab-grades" style="display:none;">
+    <div class="card">      <h2>إدخال الدرجات</h2>
+      <div class="row" style="margin-bottom:6px;">
+        <div class="field"><label>الشعبة</label><select id="gradeSection"></select></div>
+        <div class="field"><label>المادة</label><select id="gradeSubject"></select></div>
+      </div>
+      <div id="gradesTableWrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-notices" style="display:none;">
+    <div class="card">
+      <h2>إضافة تبليغ أو مخالفة</h2>
+      <form id="noticeForm">
+        <div class="row">
+          <div class="field"><label>الشعبة</label><select id="noticeSection" required></select></div>
+          <div class="field"><label>الطالب</label><select id="noticeStudent" required></select></div>
+          <div class="field"><label>النوع</label>
+            <select id="noticeType"><option value="تبليغ">تبليغ</option><option value="مخالفة">مخالفة</option></select>
+          </div>
+          <div class="field"><label>التاريخ</label><input type="date" id="noticeDate" required></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>العنوان</label><input type="text" id="noticeTitle" required style="width:100%;"></div>
+        <div class="field" style="margin-top:10px;"><label>التفاصيل</label><textarea id="noticeDetails"></textarea></div>
+        <button type="submit" class="btn" style="margin-top:12px;">إضافة</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>سجل التبليغات والمخالفات</h2>
+      <div class="field" style="max-width:260px; margin-bottom:10px;"><label>تصفية حسب الشعبة</label><select id="noticeFilterSection"></select></div>
+      <div id="noticesListWrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-attendance" style="display:none;">
+    <div class="card">
+      <h2>تسجيل الغياب</h2>
+      <div class="row" style="margin-bottom:6px;">
+        <div class="field"><label>الشعبة</label><select id="attSection"></select></div>
+        <div class="field"><label>التاريخ</label><input type="date" id="attDate"></div>
+      </div>
+      <div id="attendanceWrap"></div>
+    </div>
+  </section>
+
+  <section id="tab-release" style="display:none;">
+    <div class="card">
+      <h2>اعتماد ونشر النتائج لأولياء الأمور</h2>
+      <p style="font-size:.85rem; color:var(--ink-soft); margin-top:-8px; margin-bottom:16px;">
+        الدرجات ما تظهر لولي الأمر إلا بعد ما تفعّل الاعتماد هنا. فعّل كل فترة لما تكون جاهزة ومتأكد منها.
+      </p>
+      <div id="releaseList"></div>
+    </div>
+  </section>
+
+  <section id="tab-reports" style="display:none;">
+    <div class="card no-print">
+      <h2>نتائج الطلاب (ورقة A4)</h2>
+      <p style="font-size:.8rem; color:var(--ink-soft); margin-top:-8px;">كل فترة تُطبع في ورقة مستقلة بإطار وتنسيق رسمي، مع المجموع والمعدل ومكان التواقيع. اختر "كل الفترات" لطباعة صفحة لكل شهر وفصل.</p>
+      <div class="row">
+        <div class="field"><label>الشعبة</label><select id="repSection"></select></div>
+        <div class="field"><label>الفترة</label>
+          <select id="repPeriod">
+            <option value="all">كل الفترات (صفحة لكل فترة)</option>
+            <option value="m1">الشهر الأول</option>
+            <option value="m2">الشهر الثاني</option>
+            <option value="fasl1">الفصل الأول</option>
+            <option value="half">نصف السنة</option>
+            <option value="m3">الشهر الثالث</option>
+            <option value="m4">الشهر الرابع</option>
+            <option value="fasl2">الفصل الثاني</option>
+            <option value="saay">السعي السنوي</option>
+            <option value="final">الدرجة النهائية</option>
+          </select>
+        </div>
+        <div class="field"><label>اتجاه الورقة</label>
+          <select id="repOrient">
+            <option value="auto">تلقائي (حسب عدد المواد)</option>
+            <option value="port">عمودي</option>
+            <option value="land">أفقي</option>
+          </select>
+        </div>
+        <button class="btn" id="btnMonthlyReport">عرض</button>
+        <button class="btn small" id="btnPrint1">طباعة / حفظ PDF</button>
+      </div>
+    </div>
+    <div id="monthlyReportWrap" class="a4-scroll"></div>
+
+    <div class="card no-print">
+      <h2>كشف النتائج النهائي</h2>
+      <div class="row">
+        <div class="field"><label>الشعبة</label><select id="resSection"></select></div>
+        <button class="btn" id="btnResultsReport">عرض الكشف</button>
+        <button class="btn small" id="btnPrint2">طباعة</button>
+      </div>
+    </div>
+    <div class="card" id="resultsReportWrap"></div>
+  </section>
+
+  <section id="tab-certs" style="display:none;">
+    <div class="card no-print">
+      <h2>شهادات الطلاب (ورقة A4 لكل طالب)</h2>
+      <p style="font-size:.8rem; color:var(--ink-soft); margin-top:-8px;">شهادة بنمط الشهادة المدرسية: اختر المرحلة والشعبة والطالب ونوع الشهادة: الشهادة الكاملة، أو شهادة مستقلة لكل شهر وفصل. تحتوي شعار المدرسة وصورة الطالب والمجموع والمعدل والغياب وتوقيع المدير.</p>
+      <div class="row">
+        <div class="field"><label>المرحلة (الصف)</label><select id="certGrade"></select></div>
+        <div class="field"><label>الشعبة</label><select id="certSection"></select></div>
+        <div class="field"><label>الطالب</label><select id="certStudent"></select></div>
+        <div class="field"><label>نوع الشهادة</label>
+          <select id="certType">
+            <option value="full">الشهادة الكاملة (كل الدرجات)</option>
+            <option value="m1">شهادة الشهر الأول</option>
+            <option value="m2">شهادة الشهر الثاني</option>
+            <option value="fasl1">شهادة الفصل الأول</option>
+            <option value="half">شهادة نصف السنة</option>
+            <option value="m3">شهادة الشهر الثالث</option>
+            <option value="m4">شهادة الشهر الرابع</option>
+            <option value="fasl2">شهادة الفصل الثاني</option>
+            <option value="saay">شهادة السعي السنوي</option>
+            <option value="final">شهادة الدرجة النهائية</option>
+            <option value="all">كل الفترات (شهادة منفصلة لكل فترة)</option>
+          </select>
+        </div>
+        <button class="btn" id="btnCertShow">عرض</button>
+        <button class="btn small" id="btnCertPrint">طباعة / حفظ PDF</button>
+      </div>
+    </div>
+    <div id="certWrap" class="a4-scroll"></div>
+  </section>
+
+  <section id="tab-idcards" style="display:none;">
+    <div class="card no-print">
+      <h2>بطاقات هوية الطلاب</h2>
+      <div class="row">
+        <div class="field"><label>الشعبة</label><select id="idSection"></select></div>
+        <button class="btn" id="btnGenCards">إنشاء البطاقات</button>
+        <button class="btn small" id="btnPrintCards">طباعة البطاقات</button>
+      </div>
+    </div>
+    <div class="idcards-grid" id="idCardsGrid"></div>
+  </section>
+
+  <section id="tab-search" style="display:none;">
+    <div class="card">
+      <h2>بحث عن طالب</h2>
+      <div class="field"><label>اكتب اسم الطالب أو رقم القيد أو الرقم الامتحاني أو اسم المستخدم</label>
+        <input type="text" id="searchInput" placeholder="مثال: نواف">
+      </div>
+      <div id="searchResultsList"></div>
+    </div>
+    <div id="searchProfileWrap"></div>
+  </section>
+
+  <section id="tab-portal" style="display:none;">
+    <div class="card portal-box">
+      <h2>دخول الطالب</h2>
+      <form class="row" id="portalForm">
+        <div class="field"><label>اسم المستخدم</label><input type="text" id="portalUser" required></div>
+        <div class="field"><label>كلمة المرور</label><input type="text" id="portalPass" required></div>
+        <button type="submit" class="btn">دخول</button>
+      </form>
+      <p style="font-size:.75rem; color:var(--ink-soft); margin-top:10px;">هذه بوابة بسيطة لعرض النتيجة فقط داخل هذا الجهاز، وليست نظام حماية مشفّر.</p>
+    </div>
+    <div class="card portal-result" id="portalResult" style="display:none;"></div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast"></div>
+<div class="save-status" id="saveStatus">○ جارٍ الاتصال بقاعدة البيانات…</div>
+
+<script>
+window.addEventListener('error', function(e){
+  try{
+    if(e && e.target && e.target !== window && e.target.tagName){
+      return; // تجاهل أخطاء تحميل الملفات الثانوية (مثل مكتبة الباركود)، فهي مُعالجة أصلاً في مكانها
+    }
+    const box = document.getElementById('fatalError');
+    if(box){
+      box.style.display = 'block';
+      box.textContent = 'حدث خطأ أثناء تشغيل البرنامج: ' + (e.message || 'خطأ غير معروف') + ' — أرسل هذه الرسالة لمن صمم لك البرنامج.';
+    }
+  }catch(err){}
+}, true);
+const STORAGE_KEY = 'gradebook2:data';
+const GRADE_LEVELS = {
+  'ابتدائي': ['الأول','الثاني','الثالث','الرابع','الخامس','السادس'],
+  'متوسط': ['الأول','الثاني','الثالث'],
+  'ثانوي': ['الأول','الثاني','الثالث','الرابع','الخامس','السادس']
+};
+const EXEMPT_GRADES = ['الأول','الثاني']; // الأول والثاني المتوسط فقط
+
+let state = { stage:null, subjects:[], sections:[], students:[], attendance:{}, releases:{m1:false,m2:false,fasl1:false,half:false,m3:false,m4:false,fasl2:false,saay:false,notebook:false}, portalUrl:'', teachers:[], lessonPosts:[], schoolName:'', academicYear:'', directorate:'', schoolLogo:'', notices:[] };
+let loaded = false;
+
+const toastEl = document.getElementById('toast');
+function toast(msg){ toastEl.textContent=msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'),1700); }
+/* ---------- مؤشر الحفظ ---------- */
+let pendingSaves = 0, lastSaveText = '', saveKind = 'idle', loadFailed = false;
+function setSaveStatus(kind, text){
+  saveKind = kind;
+  const el = document.getElementById('saveStatus');
+  if(!el) return;
+  el.className = 'save-status ' + kind;
+  el.textContent = text;
+}
+function nowTime(){ const d = new Date(); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':'); }
+window.addEventListener('beforeunload', e=>{ if(pendingSaves > 0){ e.preventDefault(); e.returnValue = ''; } });
+function normalizeReleases(rel){
+  const r = Object.assign({}, rel || {});
+  if(r.fasl1 === undefined) r.fasl1 = !!(r.m1 && r.m2);
+  if(r.fasl2 === undefined) r.fasl2 = !!(r.m3 && r.m4);
+  if(r.saay === undefined) r.saay = !!(r.m1 && r.m2 && r.half && r.m3 && r.m4);
+  return r;
+}
+function uid(p){ return p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,7); }
+let barcodeLibPromise = null;
+function loadScriptOnce(src){
+  return new Promise((resolve)=>{
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = ()=> resolve(true);
+    s.onerror = ()=> resolve(false);
+    document.head.appendChild(s);
+  });
+}
+async function loadBarcodeLib(){
+  if(window.QRCode) return true;
+  if(barcodeLibPromise) return barcodeLibPromise;
+  const sources = [
+    'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
+    'https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  ];
+  barcodeLibPromise = (async ()=>{
+    for(const src of sources){
+      const ok = await loadScriptOnce(src);
+      if(ok && window.QRCode) return true;
+    }
+    return false;
+  })();
+  return barcodeLibPromise;
+}
+function genUsername(name){
+  const base = (name && name.trim()) ? name.trim() : ('طالب' + (state.students.length+1));
+  let candidate = base;
+  let i = 2;
+  while(state.students.some(s => s.username === candidate)){
+    candidate = base + ' ' + i;
+    i++;
+  }
+  return candidate;
+}
+function genPassword(){
+  return String(Math.floor(1000 + Math.random()*9000));
+}
+function genTeacherUsername(name){
+  const base = (name && name.trim()) ? name.trim() : ('مدرس' + (state.teachers.length+1));
+  let candidate = base;
+  let i = 2;
+  while(state.teachers.some(t => t.username === candidate)){
+    candidate = base + ' ' + i;
+    i++;
+  }
+  return candidate;
+}
+
+/* ---------- Firebase config: ضع بيانات مشروعك هنا ---------- */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCO0u2SSolJAHlkTHu4u3kLP9vJYbP0RG4",
+  authDomain: "add-project-74598.firebaseapp.com",
+  databaseURL: "https://add-project-74598-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "add-project-74598"
+};
+
+let dbRef = null;
+let firebaseReady = false;
+
+function showSetupNotice(msg){
+  const box = document.getElementById('fatalError');
+  if(box){
+    box.style.display = 'block';
+    box.textContent = msg || 'لم يتم ضبط بيانات Firebase بعد. افتح ملف الكود وضع بيانات مشروعك داخل FIREBASE_CONFIG أعلى السكربت.';
+  }
+}
+
+function initFirebase(){
+  if(FIREBASE_CONFIG.apiKey.startsWith('PASTE_')){
+    showSetupNotice();
+    return false;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    dbRef = firebase.database().ref('gradebook_data');
+    firebaseReady = true;
+    return true;
+  }catch(e){
+    showSetupNotice('حدث خطأ أثناء الاتصال بـ Firebase: ' + e.message);
+    return false;
+  }
+}
+
+function watchConnection(){
+  try{
+    firebase.database().ref('.info/connected').on('value', snap=>{
+      if(snap.val() !== true){
+        setSaveStatus('warn', '⚠ انقطع الاتصال — لن تُحفظ التعديلات حتى يعود');
+      } else if(saveKind === 'warn' || saveKind === 'idle'){
+        if(pendingSaves > 0) setSaveStatus('saving', '… جارٍ الحفظ');
+        else setSaveStatus(lastSaveText ? 'ok' : 'idle', lastSaveText || '● متصل بقاعدة البيانات');
+      }
+    });
+  }catch(e){}
+}
+async function load(){
+  if(!initFirebase()){
+    setSaveStatus('err', '⚠ لم يتم الاتصال بقاعدة البيانات — لن تُحفظ التعديلات');
+    loaded = true;
+    renderAll();
+    const overlay = document.getElementById('loadingOverlay');
+    if(overlay) overlay.style.display = 'none';
+    return;
+  }
+  watchConnection();
+  try{
+    const snap = await dbRef.once('value');
+    if(snap.exists()) state = snap.val();
+    if(saveKind === 'idle') setSaveStatus('idle', '● متصل بقاعدة البيانات');
+  }catch(e){
+    loadFailed = true;
+    setSaveStatus('err', '⚠ تعذر تحميل البيانات — الحفظ متوقف حتى لا تُمسح البيانات، حدّث الصفحة');
+    toast('تعذر تحميل البيانات، تحقق من الاتصال بالإنترنت');
+  }
+  if(!state.stage) state.stage = null;
+  if(!state.subjects) state.subjects = [];
+  if(!state.sections) state.sections = [];
+  if(!state.students) state.students = [];
+  if(!state.attendance) state.attendance = {};
+  if(!state.releases) state.releases = {m1:false,m2:false,half:false,m3:false,m4:false,notebook:false};
+  state.releases = normalizeReleases(state.releases);
+  if(state.portalUrl===undefined) state.portalUrl = '';
+  if(!state.teachers) state.teachers = [];
+  if(state.schoolName===undefined) state.schoolName = '';
+  if(state.academicYear===undefined) state.academicYear = '';
+  if(state.directorate===undefined) state.directorate = '';
+  if(state.schoolLogo===undefined) state.schoolLogo = '';
+  if(!state.lessonPosts) state.lessonPosts = [];
+  if(!state.notices) state.notices = [];
+  loaded = true;
+  renderAll();
+  const overlay = document.getElementById('loadingOverlay');
+  if(overlay) overlay.style.display = 'none';
+}
+async function save(){
+  if(!firebaseReady){ setSaveStatus('err', '⚠ لا يوجد اتصال بقاعدة البيانات — التعديلات لن تُحفظ'); return; }
+  if(!loaded) return;
+  if(loadFailed){
+    setSaveStatus('err', '⚠ لم يُحفظ — البيانات لم تُحمَّل من قاعدة البيانات، حدّث الصفحة');
+    toast('لم يُحفظ: حدّث الصفحة أولاً');
+    return;
+  }
+  pendingSaves++;
+  setSaveStatus('saving', '… جارٍ الحفظ');
+  const slow = setTimeout(()=>{ if(pendingSaves > 0 && saveKind === 'saving') setSaveStatus('warn', '⏳ بانتظار الاتصال… لم يُحفظ بعد'); }, 6000);
+  try{
+    const payload = Object.assign({}, state);
+    delete payload.lessonPosts;
+    await dbRef.update(payload);
+    pendingSaves--; clearTimeout(slow);
+    if(pendingSaves === 0){ lastSaveText = '✓ تم الحفظ في قاعدة البيانات · ' + nowTime(); setSaveStatus('ok', lastSaveText); }
+  }catch(e){
+    pendingSaves--; clearTimeout(slow);
+    const denied = /permission_denied/i.test(((e && e.code) || '') + ' ' + ((e && e.message) || ''));
+    setSaveStatus('err', denied ? '⚠ لم يُحفظ — قواعد Firebase تمنع الكتابة' : '⚠ لم يُحفظ — تحقق من الاتصال بالإنترنت');
+    toast('تعذر الحفظ، تحقق من الاتصال بالإنترنت');
+  }
+}
+
+/* ---------- math helpers ---------- */
+function num(v){ return (v===undefined||v===null||v==='') ? null : Number(v); }
+function avg(arr){
+  if(arr.some(v=> v===null || v===undefined || isNaN(v))) return null;
+  return Math.round((arr.reduce((a,b)=>a+Number(b),0)/arr.length)*100)/100;
+}
+function calcFasl1(g){ return avg([num(g.m1), num(g.m2)]); }
+function calcFasl2(g){ return avg([num(g.m3), num(g.m4)]); }
+function calcSaay(g){ return avg([calcFasl1(g), num(g.half), calcFasl2(g)]); }
+function calcFinal(g){
+  const saay = calcSaay(g);
+  const nb = num(g.notebook);
+  if(saay===null || nb===null) return null;
+  return avg([saay, nb]);
+}
+function studentSaayList(student){
+  return state.subjects.map(s=> calcSaay(student.grades[s.id]||{})).filter(v=> v!==null);
+}
+function studentOverallAvg(student){
+  const l = studentSaayList(student);
+  return l.length ? avg(l) : null;
+}
+function studentMinSaay(student){
+  const l = studentSaayList(student);
+  return l.length ? Math.min(...l) : null;
+}
+function sectionOf(student){ return state.sections.find(s=>s.id===student.sectionId); }
+function studentExemption(student){
+  const sec = sectionOf(student);
+  if(!sec || state.stage!=='متوسط' || !EXEMPT_GRADES.includes(sec.grade)) return {type:'none'};
+  const overall = studentOverallAvg(student);
+  const minS = studentMinSaay(student);
+  if(overall===null || studentSaayList(student).length < state.subjects.length) return {type:'none'};
+  if(overall>=85 && minS!==null && minS>=75) return {type:'عام'};
+  if(overall<85){
+    const subs = state.subjects.filter(s=>{
+      const sv = calcSaay(student.grades[s.id]||{});
+      return sv!==null && sv>=90;
+    });
+    if(subs.length) return {type:'فردي', subjects:subs};
+  }
+  return {type:'none'};
+}
+function subjectFinal(student, subject, exemption){
+  exemption = exemption || studentExemption(student);
+  if(exemption.type==='عام') return {display:'معفى', value:null, exempt:true};
+  if(exemption.type==='فردي' && exemption.subjects.some(s=>s.id===subject.id)) return {display:'معفى', value:null, exempt:true};
+  const f = calcFinal(student.grades[subject.id]||{});
+  return {display: f===null ? '-' : f, value:f, exempt:false};
+}
+function studentStatus(student){
+  const exemption = studentExemption(student);
+  if(exemption.type==='عام') return {status:'ناجح', note:'إعفاء عام', failing:[]};
+  const failing = [];
+  state.subjects.forEach(sub=>{
+    if(exemption.type==='فردي' && exemption.subjects.some(s=>s.id===sub.id)) return;
+    const f = calcFinal(student.grades[sub.id]||{});
+    if(f!==null && f<50) failing.push(sub.name);
+  });
+  let status = failing.length===0 ? 'ناجح' : (failing.length<=3 ? 'مكمل' : 'راسب');
+  let note = '';
+  if(exemption.type==='فردي') note = 'إعفاء فردي: '+exemption.subjects.map(s=>s.name).join('، ');
+  if(status==='مكمل') note += (note?' | ':'')+'مكمل: '+failing.join('، ');
+  return {status, note, failing};
+}
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['settings','students','teachers','grades','attendance','notices','release','reports','certs','idcards','search','portal'].forEach(t=>{
+      document.getElementById('tab-'+t).style.display = (t===btn.dataset.tab) ? 'block' : 'none';
+    });
+  });
+});
+
+/* ---------- settings: stage ---------- */
+document.getElementById('btnSaveSchoolName').addEventListener('click', async ()=>{
+  state.schoolName = document.getElementById('schoolNameInput').value.trim();
+  state.academicYear = document.getElementById('academicYearInput').value.trim();
+  state.directorate = document.getElementById('directorateInput').value.trim();
+  const logoFile = document.getElementById('schoolLogoInput').files[0];
+  if(logoFile){
+    try{ state.schoolLogo = await resizeImageFile(logoFile, 260, 'image/png'); }
+    catch(e){ toast('تعذر معالجة صورة الشعار'); return; }
+    document.getElementById('schoolLogoInput').value = '';
+  }
+  await save();
+  renderSchoolLogoPreview();
+  toast('تم حفظ بيانات المدرسة');
+});
+function renderSchoolLogoPreview(){
+  const img = document.getElementById('schoolLogoPreview');
+  if(state.schoolLogo){ img.src = state.schoolLogo; img.style.display = 'block'; } else { img.style.display = 'none'; }
+}
+document.getElementById('btnRemoveLogo').addEventListener('click', async ()=>{
+  state.schoolLogo = '';
+  await save(); renderSchoolLogoPreview(); toast('تمت إزالة الشعار');
+});
+
+document.getElementById('btnSavePortalUrl').addEventListener('click', async ()=>{
+  state.portalUrl = document.getElementById('portalUrlInput').value.trim();
+  await save();
+  toast('تم حفظ الرابط');
+});
+
+function renderStagePicker(){
+  const el = document.getElementById('stagePicker');
+  el.innerHTML = Object.keys(GRADE_LEVELS).map(s=>`
+    <div class="stage-btn ${state.stage===s?'selected':''}" data-stage="${s}">${s}</div>
+  `).join('');
+  el.querySelectorAll('.stage-btn').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.stage = b.dataset.stage;
+      await save();
+      renderAll();
+      toast('تم تحديد المرحلة: '+state.stage);
+    });
+  });
+  document.getElementById('stageTag').textContent = state.stage ? ('المرحلة: '+state.stage) : 'لم تُحدد المرحلة';
+}
+
+/* ---------- settings: subjects ---------- */
+document.getElementById('subjectForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const input = document.getElementById('subjectName');
+  const name = input.value.trim();
+  if(!name) return;
+  state.subjects.push({id:uid('subj'), name});
+  input.value='';
+  await save(); renderAll();
+  toast('تمت إضافة المادة');
+});
+function renderSubjectsList(){
+  const el = document.getElementById('subjectsList');
+  if(!state.subjects.length){ el.innerHTML = '<span style="color:var(--ink-soft);font-size:.85rem;">لا توجد مواد بعد</span>'; return; }
+  el.innerHTML = state.subjects.map(s=>`
+    <div class="pill">${escapeHtml(s.name)} <button data-id="${s.id}">✕</button></div>
+  `).join('');
+  el.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.subjects = state.subjects.filter(s=>s.id!==b.dataset.id);
+      await save(); renderAll();
+    });
+  });
+}
+
+/* ---------- settings: sections ---------- */
+function refreshSectionGradeOptions(){
+  const sel = document.getElementById('sectionGrade');
+  const grades = state.stage ? GRADE_LEVELS[state.stage] : [];
+  sel.innerHTML = grades.map(g=>`<option value="${g}">${g}</option>`).join('') || '<option value="">اختر المرحلة أولاً</option>';
+}
+document.getElementById('sectionForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  if(!state.stage){ toast('حدد المرحلة أولاً'); return; }
+  const name = document.getElementById('sectionName').value.trim();
+  const grade = document.getElementById('sectionGrade').value;
+  if(!name || !grade) return;
+  state.sections.push({id:uid('sec'), name, grade});
+  document.getElementById('sectionName').value='';
+  await save(); renderAll();
+  toast('تمت إضافة الشعبة');
+});
+function renderSectionsList(){
+  const el = document.getElementById('sectionsList');
+  if(!state.sections.length){ el.innerHTML = '<span style="color:var(--ink-soft);font-size:.85rem;">لا توجد شعب بعد</span>'; return; }
+  el.innerHTML = state.sections.map(s=>`
+    <div class="pill">${escapeHtml(s.name)} - ${escapeHtml(s.grade)} <button data-id="${s.id}">✕</button></div>
+  `).join('');
+  el.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      state.sections = state.sections.filter(s=>s.id!==b.dataset.id);
+      state.students = state.students.filter(st=>st.sectionId!==b.dataset.id);
+      await save(); renderAll();
+    });
+  });
+}
+
+/* ---------- students ---------- */
+function fillSectionSelect(sel, includeAll){
+  sel.innerHTML = (includeAll?'<option value="">— كل الشعب —</option>':'') +
+    state.sections.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('');
+}
+function resizeImageFile(file, maxSize, mime){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > h){ if(w > maxSize){ h = Math.round(h*maxSize/w); w = maxSize; } }
+        else{ if(h > maxSize){ w = Math.round(w*maxSize/h); h = maxSize; } }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL(mime || 'image/jpeg', 0.75));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+document.getElementById('studentForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const sectionId = document.getElementById('stuSection').value;
+  const name = document.getElementById('stuName').value.trim();
+  const reg = document.getElementById('stuReg').value.trim();
+  const exam = document.getElementById('stuExam').value.trim();
+  const userIn = document.getElementById('stuUser').value.trim();
+  const passIn = document.getElementById('stuPass').value.trim();
+  const photoFile = document.getElementById('stuPhoto').files[0];
+  if(!sectionId || !name){ toast('أكمل بيانات الطالب والشعبة'); return; }
+  const username = userIn || genUsername(name);
+  const password = passIn || genPassword();
+  let photo = '';
+  if(photoFile){
+    try{ photo = await resizeImageFile(photoFile, 240); }catch(e){}
+  }
+  state.students.push({id:uid('stu'), name, regNo:reg, examNo:exam, sectionId, username, password, photo, grades:{}});
+  document.getElementById('stuName').value=''; document.getElementById('stuReg').value=''; document.getElementById('stuExam').value='';
+  document.getElementById('stuUser').value=''; document.getElementById('stuPass').value=''; document.getElementById('stuPhoto').value='';
+  await save(); renderAll();
+  toast('تمت إضافة الطالب');
+});
+function renderStudentsTable(){
+  const sel = document.getElementById('viewSection');
+  const wrap = document.getElementById('studentsTableWrap');
+  const sectionId = sel.value;
+  const list = state.students.filter(s=> !sectionId || s.sectionId===sectionId);
+  if(!list.length){ wrap.innerHTML='<div class="empty">لا يوجد طلاب لعرضهم</div>'; return; }
+  wrap.innerHTML = `<table><thead><tr><th>الاسم</th><th>رقم القيد</th><th>الرقم الامتحاني</th><th>الشعبة</th><th>اسم المستخدم</th><th>كلمة المرور</th><th></th></tr></thead><tbody>
+    ${list.map(s=>{
+      const sec = sectionOf(s);
+      return `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.regNo||'-')}</td><td>${escapeHtml(s.examNo||'-')}</td><td>${sec?escapeHtml(sec.name):'-'}</td>
+      <td><input type="text" data-stu="${s.id}" data-field="username" value="${escapeHtml(s.username||'')}" style="width:90px;"></td>
+      <td><input type="text" data-stu="${s.id}" data-field="password" value="${escapeHtml(s.password||'')}" style="width:80px;"></td>
+      <td><button class="link" data-id="${s.id}">حذف</button></td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+  wrap.querySelectorAll('input[data-field]').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const student = state.students.find(s=>s.id===inp.dataset.stu);
+      student[inp.dataset.field] = inp.value.trim();
+      await save();
+      toast('تم الحفظ');
+    });
+  });
+  wrap.querySelectorAll('button.link').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      if(!confirm('حذف هذا الطالب؟')) return;
+      state.students = state.students.filter(s=>s.id!==b.dataset.id);
+      await save(); renderAll();
+    });
+  });
+}
+
+/* ---------- teachers ---------- */
+document.getElementById('teacherForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const name = document.getElementById('teacherName').value.trim();
+  const userIn = document.getElementById('teacherUser').value.trim();
+  const passIn = document.getElementById('teacherPass').value.trim();
+  if(!name){ toast('أدخل اسم المدرّس'); return; }
+  const username = userIn || genTeacherUsername(name);
+  const password = passIn || genPassword();
+  state.teachers.push({id:uid('tch'), name, username, password, assignments:[]});
+  document.getElementById('teacherName').value='';
+  document.getElementById('teacherUser').value='';
+  document.getElementById('teacherPass').value='';
+  await save(); renderAll();
+  toast('تمت إضافة المدرّس');
+});
+
+function renderTeachersList(){
+  const wrap = document.getElementById('teachersList');
+  if(!state.teachers.length){ wrap.innerHTML = '<div class="empty">لا يوجد مدرّسون بعد</div>'; return; }
+  wrap.innerHTML = state.teachers.map(t=>{
+    const assignRows = t.assignments.map((a,idx)=>{
+      const sub = state.subjects.find(x=>x.id===a.subjectId);
+      const sec = state.sections.find(x=>x.id===a.sectionId);
+      return `<div class="pill">${sub?escapeHtml(sub.name):'-'} / ${sec?escapeHtml(sec.name):'-'}
+        <button data-tid="${t.id}" data-idx="${idx}" class="remove-assign">✕</button></div>`;
+    }).join('');
+    return `<div class="card" style="margin-bottom:14px;">
+      <div class="row" style="align-items:center; justify-content:space-between;">
+        <div>
+          <strong>${escapeHtml(t.name)}</strong>
+          <div style="font-size:.8rem; color:var(--ink-soft); margin-top:4px;">
+            مستخدم: <input type="text" data-tid="${t.id}" data-field="username" value="${escapeHtml(t.username)}" style="width:100px; display:inline-block;">
+            كلمة المرور: <input type="text" data-tid="${t.id}" data-field="password" value="${escapeHtml(t.password)}" style="width:80px; display:inline-block;">
+          </div>
+        </div>
+        <button class="link" data-tid="${t.id}" data-action="deleteTeacher">حذف المدرّس</button>
+      </div>
+      <div class="pill-list" style="margin-top:10px;">${assignRows || '<span style="color:var(--ink-soft); font-size:.82rem;">لا توجد تكليفات بعد</span>'}</div>
+      <div class="row" style="margin-top:10px;">
+        <div class="field"><label>المادة</label><select data-tid="${t.id}" class="assignSubject">${state.subjects.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}</select></div>
+        <div class="field"><label>الشعبة</label><select data-tid="${t.id}" class="assignSection">${state.sections.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')}</select></div>
+        <button class="btn small" data-tid="${t.id}" data-action="addAssign">إضافة تكليف</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('input[data-field]').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const t = state.teachers.find(x=>x.id===inp.dataset.tid);
+      t[inp.dataset.field] = inp.value.trim();
+      await save();
+      toast('تم الحفظ');
+    });
+  });
+  wrap.querySelectorAll('button[data-action="deleteTeacher"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      if(!confirm('حذف هذا المدرّس؟')) return;
+      state.teachers = state.teachers.filter(t=>t.id!==b.dataset.tid);
+      await save(); renderAll();
+    });
+  });
+  wrap.querySelectorAll('button[data-action="addAssign"]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const t = state.teachers.find(x=>x.id===b.dataset.tid);
+      const subSel = wrap.querySelector(`.assignSubject[data-tid="${b.dataset.tid}"]`);
+      const secSel = wrap.querySelector(`.assignSection[data-tid="${b.dataset.tid}"]`);
+      if(!subSel.value || !secSel.value){ toast('أضف مادة وشعبة أولاً من الإعدادات'); return; }
+      const exists = t.assignments.some(a=>a.subjectId===subSel.value && a.sectionId===secSel.value);
+      if(exists){ toast('هذا التكليف موجود مسبقًا'); return; }
+      t.assignments.push({subjectId:subSel.value, sectionId:secSel.value});
+      await save(); renderAll();
+      toast('تمت إضافة التكليف');
+    });
+  });
+  wrap.querySelectorAll('button.remove-assign').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      const t = state.teachers.find(x=>x.id===b.dataset.tid);
+      t.assignments.splice(Number(b.dataset.idx),1);
+      await save(); renderAll();
+    });
+  });
+}
+
+/* ---------- grades entry ---------- */
+function renderGradesTable(){
+  const secSel = document.getElementById('gradeSection');
+  const subSel = document.getElementById('gradeSubject');
+  const wrap = document.getElementById('gradesTableWrap');
+  const sectionId = secSel.value;
+  const subjectId = subSel.value;
+  if(!sectionId || !subjectId){ wrap.innerHTML = '<div class="empty">اختر الشعبة والمادة</div>'; return; }
+  const list = state.students.filter(s=>s.sectionId===sectionId);
+  if(!list.length){ wrap.innerHTML = '<div class="empty">لا يوجد طلاب في هذه الشعبة</div>'; return; }
+  wrap.innerHTML = `<table><thead><tr>
+    <th>الطالب</th><th>الشهر1</th><th>الشهر2</th><th>الفصل1</th><th>نصف السنة</th>
+    <th>الشهر3</th><th>الشهر4</th><th>الفصل2</th><th>درجة الدفتر</th><th>السعي</th><th>النهائي</th><th>ملاحظات</th>
+  </tr></thead><tbody>
+  ${list.map(s=>{
+    const g = s.grades[subjectId] || {};
+    const exemption = studentExemption(s);
+    const isExempt = exemption.type==='عام' || (exemption.type==='فردي' && exemption.subjects.some(x=>x.id===subjectId));
+    const f1 = calcFasl1(g); const f2 = calcFasl2(g); const saay = calcSaay(g);
+    const finalObj = subjectFinal(s, state.subjects.find(x=>x.id===subjectId), exemption);
+    let note = '';
+    if(exemption.type==='عام') note='إعفاء عام';
+    else if(exemption.type==='فردي' && exemption.subjects.some(x=>x.id===subjectId)) note='إعفاء فردي';
+    return `<tr data-stu="${s.id}">
+      <td style="text-align:right;">${escapeHtml(s.name)}</td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="m1" value="${g.m1??''}"></td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="m2" value="${g.m2??''}"></td>
+      <td>${f1??'-'}</td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="half" value="${g.half??''}"></td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="m3" value="${g.m3??''}"></td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="m4" value="${g.m4??''}"></td>
+      <td>${f2??'-'}</td>
+      <td><input type="number" step="0.5" min="0" max="100" data-field="notebook" value="${g.notebook??''}" ${isExempt?'disabled':''}></td>
+      <td>${saay??'-'}</td>
+      <td>${finalObj.display}</td>
+      <td class="note-cell">${note}</td>
+    </tr>`;
+  }).join('')}
+  </tbody></table>`;
+
+  wrap.querySelectorAll('input').forEach(inp=>{
+    inp.addEventListener('change', async ()=>{
+      const tr = inp.closest('tr');
+      const stuId = tr.dataset.stu;
+      const student = state.students.find(s=>s.id===stuId);
+      if(!student.grades[subjectId]) student.grades[subjectId] = {};
+      const val = inp.value === '' ? undefined : Number(inp.value);
+      student.grades[subjectId][inp.dataset.field] = val;
+      await save();
+      renderGradesTable();
+      toast('تم الحفظ');
+    });
+  });
+}
+
+/* ---------- student certificates ---------- */
+const CERT_COLS = [
+  {key:'m1', h:'الشهر الأول'}, {key:'m2', h:'الشهر الثاني'}, {key:'fasl1', h:'معدل الفصل الأول'}, {key:'half', h:'نصف السنة'},
+  {key:'m3', h:'الشهر الثالث'}, {key:'m4', h:'الشهر الرابع'}, {key:'fasl2', h:'معدل الفصل الثاني'},
+  {key:'saay', h:'السعي السنوي'}, {key:'notebook', h:'درجة الدفتر'}, {key:'final', h:'الدرجة النهائية'}
+];
+const STAGE_ADJ = {'ابتدائي':'الابتدائي', 'متوسط':'المتوسط', 'ثانوي':'الثانوي'};
+const certFmt = v => (v===null || v===undefined || isNaN(v)) ? '-' : v;
+const certLow = v => (v!==null && v!==undefined && !isNaN(v) && v < 50) ? 'low' : '';
+
+function certOutcome(st, ex, finalCells){
+  const n = state.subjects.length;
+  const complete = ex.type==='عام' || (n>0 && finalCells.every(c=> c.exempt || c.v!==null));
+  const stat = studentStatus(st);
+  const out = {complete, resText:'غير مكتملة', resCls:'na', notes:[]};
+  if(complete){
+    out.resText = stat.status; out.resCls = stat.status==='ناجح' ? 'ok' : stat.status==='مكمل' ? 'warn' : 'fail';
+    if(ex.type==='عام') out.notes.push('معفى إعفاءً عامًا من الامتحانات النهائية.');
+    else if(ex.type==='فردي') out.notes.push('معفى إعفاءً فرديًا من: ' + ex.subjects.map(x=>x.name).join('، ') + '.');
+    if(stat.status==='مكمل') out.notes.push('مكمل في: ' + stat.failing.join('، ') + '.');
+    if(stat.status==='راسب') out.notes.push('عدد المواد التي درجتها دون 50: ' + stat.failing.length + ' (' + stat.failing.join('، ') + ').');
+  } else {
+    out.notes.push('لم تكتمل درجات بعض المواد بعد، فالنتيجة النهائية غير محسوبة.');
+  }
+  return out;
+}
+function certBoxes(arr){
+  return `<div class="cert-result" style="grid-template-columns:repeat(${arr.length},1fr);">${
+    arr.map(b=>`<div class="cert-box"><div class="lbl">${b.l}</div><div class="val ${b.c||''}">${b.v}</div></div>`).join('')}</div>`;
+}
+function certShell(st, title, body, cp){
+  const sec = sectionOf(st);
+  const absence = studentAbsenceDates(st).length;
+  return `<div class="a4-page"><div class="a4-frame"><div class="cert-inner" style="--cp:${cp}mm;">
+    <div class="cert-top">
+      <div class="rt">جمهورية العراق<br>وزارة التربية${state.directorate ? '<br>' + escapeHtml(state.directorate) : ''}</div>
+      <div class="ctr">
+        ${state.schoolLogo ? `<img class="cert-logo" src="${state.schoolLogo}" alt="">` : ''}
+        <div class="school">${escapeHtml(state.schoolName || 'اسم المدرسة')}</div>
+        ${state.academicYear ? `<div class="yr">العام الدراسي ${escapeHtml(state.academicYear)}</div>` : ''}
+      </div>
+      <div class="cert-photo">${st.photo ? `<img src="${st.photo}" alt="">` : 'الصورة'}</div>
+    </div>
+    <div class="cert-title">${escapeHtml(title)}</div>
+    <table class="cert-info">
+      <tr><td colspan="2">اسم الطالب: <b>${escapeHtml(st.name)}</b></td><td>الصف: <b>${sec?escapeHtml(sec.grade):'-'}</b></td><td>الشعبة: <b>${sec?escapeHtml(sec.name):'-'}</b></td></tr>
+      <tr><td>رقم القيد: <b>${escapeHtml(st.regNo||'-')}</b></td><td>الرقم الامتحاني: <b>${escapeHtml(st.examNo||'-')}</b></td><td>المرحلة: <b>${escapeHtml(state.stage||'-')}</b></td><td>عدد أيام الغياب: <b>${absence}</b></td></tr>
+    </table>
+    ${body}
+    <div class="cert-sigs">
+      <div class="stamp">ختم المدرسة</div>
+      <div class="sg">مدير المدرسة</div>
+    </div>
+    <div class="cert-date"><span>تحريرًا في: ${todayStr()}</span><span>${escapeHtml(st.name)}</span></div>
+  </div></div></div>`;
+}
+function certTitleSuffix(st){
+  const sec = sectionOf(st);
+  return 'الصف ' + (sec ? sec.grade : '') + ' ' + (STAGE_ADJ[state.stage] || (state.stage||''));
+}
+/* الشهادة الكاملة: كل الدرجات */
+function renderCertPage(st){
+  const subjects = state.subjects, n = subjects.length;
+  const ex = studentExemption(st);
+  const fs = n>16 ? 8 : n>14 ? 8.4 : n>12 ? 8.8 : n>10 ? 9.2 : 9.5;
+  const cp = n>16 ? 0.6 : n>14 ? 0.75 : n>12 ? 0.95 : n>10 ? 1.25 : 1.8;
+  const grid = subjects.map(su => CERT_COLS.map(c => periodCell(st, su, c.key, ex)));
+  const colStats = CERT_COLS.map((c,j)=> sumAvg(grid.map(r=>r[j].v)));
+  const last = CERT_COLS.length-1;
+  const out = certOutcome(st, ex, grid.map(r=>r[last]));
+  const finalAvg = colStats[last].avg;
+  const saayAvg = colStats[CERT_COLS.findIndex(c=>c.key==='saay')].avg;
+  const absence = studentAbsenceDates(st).length;
+  const rowsHtml = subjects.map((su,i)=>`<tr><td class="name">${escapeHtml(su.name)}</td>${
+    grid[i].map(c=> c.exempt ? '<td>معفى</td>' : `<td class="${(certLow(c.v)+(c.mark?' exm':'')).trim()}">${certFmt(c.v)}</td>`).join('')}</tr>`).join('');
+  const totRow = `<tr><td class="name">المجموع</td>${colStats.map(c=>`<td>${certFmt(c.sum)}</td>`).join('')}</tr>
+    <tr><td class="name">المعدل</td>${colStats.map(c=>`<td>${certFmt(c.avg)}</td>`).join('')}</tr>`;
+  const body = `
+    <table class="a4-table" style="font-size:${fs}pt;">
+      <thead><tr><th style="width:30mm;">المادة</th>${CERT_COLS.map(c=>`<th>${c.h}</th>`).join('')}</tr></thead>
+      <tbody>${rowsHtml}</tbody><tfoot>${totRow}</tfoot>
+    </table>
+    ${certBoxes([
+      {l:'النتيجة', v:escapeHtml(out.resText), c:out.resCls},
+      {l: finalAvg!==null ? 'المعدل النهائي' : 'معدل السعي', v:certFmt(finalAvg!==null ? finalAvg : saayAvg)},
+      {l:'عدد أيام الغياب', v:absence}
+    ])}
+    <div class="cert-notes"><b>ملاحظات:</b>${escapeHtml(out.notes.join(' '))}</div>`;
+  return certShell(st, 'شهادة ' + certTitleSuffix(st), body, cp);
+}
+/* شهادة فترة واحدة: شهر أو فصل أو نصف السنة أو السعي أو النهائي */
+function renderPeriodCertPage(st, key){
+  const per = REPORT_PERIODS.find(p=>p.key===key);
+  const subjects = state.subjects, n = subjects.length;
+  const ex = studentExemption(st);
+  const sz = n<=8 ? {fs:11.5,cp:2.4} : n<=10 ? {fs:11,cp:1.9} : n<=12 ? {fs:10.5,cp:1.5} : n<=14 ? {fs:10,cp:1.2} : n<=16 ? {fs:9.5,cp:0.9} : {fs:9,cp:0.7};
+  const cells = subjects.map(su=> periodCell(st, su, key, ex));
+  const stats = sumAvg(cells.map(c=>c.v));
+  const hasAny = cells.some(c=> c.v!==null || c.exempt);
+  const absence = studentAbsenceDates(st).length;
+  const rows = subjects.map((su,i)=>{
+    const c = cells[i];
+    let valHtml, note = '';
+    if(c.exempt){ valHtml = 'معفى'; note = 'معفى من الامتحان'; }
+    else { valHtml = certFmt(c.v); if(certLow(c.v)) note = 'دون درجة النجاح'; if(c.mark) note = 'معفى (إعفاء فردي)'; }
+    const cls = (c.exempt ? '' : (certLow(c.v) + (c.mark?' exm':''))).trim();
+    return `<tr><td>${i+1}</td><td class="name">${escapeHtml(su.name)}</td><td class="${cls}" style="font-weight:700;">${valHtml}</td><td class="note">${note}</td></tr>`;
+  }).join('');
+  const boxes = [];
+  const notes = [];
+  if(key==='final'){
+    const out = certOutcome(st, ex, cells);
+    boxes.push({l:'النتيجة', v:escapeHtml(out.resText), c:out.resCls});
+    out.notes.forEach(x=>notes.push(x));
+  } else if(key==='saay'){
+    const lbl = ex.type==='عام' ? 'إعفاء عام' : ex.type==='فردي' ? 'إعفاء فردي' : 'لا يوجد';
+    boxes.push({l:'الإعفاء', v:lbl, c: ex.type==='none' ? 'na' : 'ok'});
+    if(ex.type==='عام') notes.push('معفى إعفاءً عامًا من الامتحانات النهائية.');
+    else if(ex.type==='فردي') notes.push('معفى إعفاءً فرديًا من: ' + ex.subjects.map(x=>x.name).join('، ') + '.');
+    else notes.push('لم يتحقق شرط الإعفاء، أو لم تكتمل درجات السعي لكل المواد.');
+  }
+  if(key!=='final' && key!=='saay'){
+    const lows = subjects.filter((su,i)=> certLow(cells[i].v));
+    if(!hasAny) notes.push('لم تُدخل درجات هذه الفترة بعد.');
+    else if(lows.length) notes.push('درجات دون 50 في: ' + lows.map(x=>x.name).join('، ') + '.');
+  } else if(!hasAny){
+    notes.push('لم تُدخل درجات هذه الفترة بعد.');
+  }
+  boxes.push({l:'المجموع', v:certFmt(stats.sum)}, {l:'المعدل', v:certFmt(stats.avg), c:certLow(stats.avg)?'fail':''}, {l:'عدد أيام الغياب', v:absence});
+  const body = `
+    <table class="a4-table" style="font-size:${sz.fs}pt;">
+      <thead><tr><th style="width:10mm;">ت</th><th>المادة</th><th style="width:34mm;">الدرجة</th><th style="width:56mm;">ملاحظات</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${certBoxes(boxes)}
+    <div class="cert-notes"><b>ملاحظات:</b>${escapeHtml(notes.join(' '))}</div>`;
+  return certShell(st, 'شهادة ' + per.label + ' — ' + certTitleSuffix(st), body, sz.cp);
+}
+/* ---- عناصر التحكم: المرحلة / الشعبة / الطالب / نوع الشهادة ---- */
+function certGradeList(){
+  const order = GRADE_LEVELS[state.stage] || [];
+  return Array.from(new Set(state.sections.map(s=>s.grade)))
+    .sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?99:ia)-(ib<0?99:ib); });
+}
+function fillCertSections(keep){
+  const g = document.getElementById('certGrade').value;
+  const sel = document.getElementById('certSection');
+  const list = state.sections.filter(s=> !g || s.grade===g);
+  sel.innerHTML = '<option value="">كل الشعب</option>' + list.map(s=>`<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('');
+  if(keep && list.some(s=>s.id===keep)) sel.value = keep;
+}
+function certStudentList(){
+  const g = document.getElementById('certGrade').value;
+  const secId = document.getElementById('certSection').value;
+  return state.students.filter(s=>{
+    if(secId) return s.sectionId===secId;
+    if(g){ const sec = sectionOf(s); return sec && sec.grade===g; }
+    return true;
+  });
+}
+function fillCertStudents(keep){
+  const sel = document.getElementById('certStudent');
+  const list = certStudentList();
+  sel.innerHTML = `<option value="">كل الطلاب (${list.length})</option>` + list.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  if(keep && list.some(s=>s.id===keep)) sel.value = keep;
+}
+function renderCertControls(){
+  const gSel = document.getElementById('certGrade');
+  const prevG = gSel.value, prevSec = document.getElementById('certSection').value, prevStu = document.getElementById('certStudent').value;
+  const grades = certGradeList();
+  gSel.innerHTML = '<option value="">كل المراحل</option>' + grades.map(g=>`<option value="${escapeHtml(g)}">${escapeHtml(g)}</option>`).join('');
+  if(prevG && grades.includes(prevG)) gSel.value = prevG;
+  fillCertSections(prevSec);
+  fillCertStudents(prevStu);
+}
+function renderCerts(){
+  const wrap = document.getElementById('certWrap');
+  if(!state.subjects.length){ wrap.innerHTML = '<div class="empty">أضف المواد الدراسية أولاً من تبويب الإعدادات</div>'; return false; }
+  const stuId = document.getElementById('certStudent').value;
+  const type = document.getElementById('certType').value;
+  const list = certStudentList().filter(s=> !stuId || s.id===stuId);
+  if(!list.length){ wrap.innerHTML = '<div class="empty">لا يوجد طلاب لعرض شهاداتهم</div>'; return false; }
+  const pages = [];
+  list.forEach(st=>{
+    if(type==='full') pages.push(renderCertPage(st));
+    else if(type==='all') REPORT_PERIODS.forEach(p=> pages.push(renderPeriodCertPage(st, p.key)));
+    else pages.push(renderPeriodCertPage(st, type));
+  });
+  wrap.innerHTML = `<div class="a4-wrap">${pages.join('')}</div>`;
+  return true;
+}
+document.getElementById('certGrade').addEventListener('change', ()=>{ fillCertSections(); fillCertStudents(); });
+document.getElementById('certSection').addEventListener('change', ()=> fillCertStudents());
+document.getElementById('btnCertShow').addEventListener('click', renderCerts);
+document.getElementById('btnCertPrint').addEventListener('click', ()=>{ if(renderCerts()) printWithMode('cert', false); });
+
+/* ---------- notices & violations ---------- */
+function fillNoticeStudents(keep){
+  const secId = document.getElementById('noticeSection').value;
+  const stuSel = document.getElementById('noticeStudent');
+  const list = state.students.filter(s=>s.sectionId===secId);
+  stuSel.innerHTML = list.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+  if(keep && list.some(s=>s.id===keep)) stuSel.value = keep;
+}
+function renderNoticesTab(){
+  const secSel = document.getElementById('noticeSection');
+  const stuSel = document.getElementById('noticeStudent');
+  const filSel = document.getElementById('noticeFilterSection');
+  const prevSec = secSel.value, prevStu = stuSel.value, prevFil = filSel.value;
+  fillSectionSelect(secSel, false);
+  if(prevSec && state.sections.some(s=>s.id===prevSec)) secSel.value = prevSec;
+  fillSectionSelect(filSel, true);
+  if(prevFil && Array.from(filSel.options).some(o=>o.value===prevFil)) filSel.value = prevFil;
+  fillNoticeStudents(prevStu);
+  if(!document.getElementById('noticeDate').value) document.getElementById('noticeDate').value = todayStr();
+  renderNoticesList();
+}
+function renderNoticesList(){
+  const wrap = document.getElementById('noticesListWrap');
+  const fil = document.getElementById('noticeFilterSection').value;
+  const list = (state.notices||[])
+    .map(n=>({n, st: state.students.find(s=>s.id===n.studentId)}))
+    .filter(x=> x.st && (!fil || x.st.sectionId===fil))
+    .sort((a,b)=> (b.n.date||'').localeCompare(a.n.date||'') || (b.n.createdAt||0)-(a.n.createdAt||0));
+  if(!list.length){ wrap.innerHTML = '<div class="empty">لا توجد تبليغات أو مخالفات مسجّلة</div>'; return; }
+  wrap.innerHTML = `<div style="overflow-x:auto;"><table><thead><tr>
+    <th>التاريخ</th><th>الطالب</th><th>الشعبة</th><th>النوع</th><th>العنوان</th><th>التفاصيل</th><th></th>
+  </tr></thead><tbody>${list.map(({n,st})=>{
+    const sec = sectionOf(st);
+    const cls = n.type==='مخالفة' ? 'fail' : 'notice';
+    return `<tr><td>${escapeHtml(n.date)}</td><td style="text-align:right;">${escapeHtml(st.name)}</td>
+      <td>${sec?escapeHtml(sec.name):'-'}</td><td><span class="tag ${cls}">${escapeHtml(n.type)}</span></td>
+      <td style="text-align:right;">${escapeHtml(n.title)}</td>
+      <td style="text-align:right; white-space:pre-wrap;">${escapeHtml(n.details||'')}</td>
+      <td><button class="link" data-nid="${n.id}">حذف</button></td></tr>`;
+  }).join('')}</tbody></table></div>`;
+  wrap.querySelectorAll('button[data-nid]').forEach(b=>{
+    b.addEventListener('click', async ()=>{
+      if(!confirm('حذف هذا السجل؟')) return;
+      state.notices = state.notices.filter(n=>n.id!==b.dataset.nid);
+      await save(); renderNoticesList(); toast('تم الحذف');
+    });
+  });
+}
+document.getElementById('noticeSection').addEventListener('change', ()=> fillNoticeStudents());
+document.getElementById('noticeFilterSection').addEventListener('change', renderNoticesList);
+document.getElementById('noticeForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const studentId = document.getElementById('noticeStudent').value;
+  const title = document.getElementById('noticeTitle').value.trim();
+  const date = document.getElementById('noticeDate').value;
+  if(!studentId || !title || !date){ toast('أكمل البيانات المطلوبة'); return; }
+  if(!state.notices) state.notices = [];
+  state.notices.push({
+    id: uid('ntc'), studentId, type: document.getElementById('noticeType').value,
+    title, details: document.getElementById('noticeDetails').value.trim(), date, createdAt: Date.now()
+  });
+  document.getElementById('noticeTitle').value = '';
+  document.getElementById('noticeDetails').value = '';
+  await save(); renderNoticesList(); toast('تمت الإضافة');
+});
+
+/* ---------- attendance ---------- */
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function renderAttendanceTab(){
+  const sectionId = document.getElementById('attSection').value;
+  const date = document.getElementById('attDate').value || todayStr();
+  const wrap = document.getElementById('attendanceWrap');
+  if(!sectionId){ wrap.innerHTML = '<div class="empty">اختر الشعبة</div>'; return; }
+  const list = state.students.filter(s=>s.sectionId===sectionId);
+  if(!list.length){ wrap.innerHTML = '<div class="empty">لا يوجد طلاب في هذه الشعبة</div>'; return; }
+  wrap.innerHTML = `<table><thead><tr><th>الطالب</th><th>غائب في ${escapeHtml(date)}</th><th>إجمالي أيام الغياب</th></tr></thead><tbody>
+    ${list.map(s=>{
+      const dates = state.attendance[s.id] || [];
+      const isAbsent = dates.includes(date);
+      return `<tr><td style="text-align:right;">${escapeHtml(s.name)}</td>
+      <td><input type="checkbox" data-stu="${s.id}" ${isAbsent?'checked':''}></td>
+      <td>${dates.length}</td></tr>`;
+    }).join('')}
+  </tbody></table>`;
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', async ()=>{
+      const stuId = cb.dataset.stu;
+      if(!state.attendance[stuId]) state.attendance[stuId] = [];
+      const arr = state.attendance[stuId];
+      const idx = arr.indexOf(date);
+      if(cb.checked && idx===-1) arr.push(date);
+      if(!cb.checked && idx!==-1) arr.splice(idx,1);
+      await save();
+      renderAttendanceTab();
+      toast('تم حفظ الغياب');
+    });
+  });
+}
+document.getElementById('attSection').addEventListener('change', renderAttendanceTab);
+document.getElementById('attDate').addEventListener('change', renderAttendanceTab);
+
+/* ---------- attendance summary helper ---------- */
+function studentAbsenceDates(student){
+  return (state.attendance[student.id] || []).slice().sort();
+}
+
+/* ---------- release approval ---------- */
+const RELEASE_ITEMS = [
+  {key:'m1', label:'الشهر الأول'},
+  {key:'m2', label:'الشهر الثاني'},
+  {key:'fasl1', label:'الفصل الأول', formula:'= (الشهر الأول + الشهر الثاني) ÷ 2'},
+  {key:'half', label:'نصف السنة'},
+  {key:'m3', label:'الشهر الثالث'},
+  {key:'m4', label:'الشهر الرابع'},
+  {key:'fasl2', label:'الفصل الثاني', formula:'= (الشهر الثالث + الشهر الرابع) ÷ 2'},
+  {key:'saay', label:'السعي السنوي', formula:'= (الفصل الأول + نصف السنة + الفصل الثاني) ÷ 3'},
+  {key:'notebook', label:'درجة الدفتر (النتيجة النهائية)', formula:'النهائي = (السعي السنوي + درجة الدفتر) ÷ 2، وتظهر النتيجة (ناجح / مكمل / راسب) بعد اعتماد السعي السنوي ودرجة الدفتر'}
+];
+function renderReleaseTab(){
+  const wrap = document.getElementById('releaseList');
+  wrap.innerHTML = RELEASE_ITEMS.map(it=>{
+    const on = !!state.releases[it.key];
+    return `<div class="release-row${it.formula ? ' derived' : ''}">
+      <span class="rlabel">${it.label}${it.formula ? `<div class="rformula">${it.formula}</div>` : ''}</span>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="rstatus ${on?'on':'off'}">${on?'معتمدة - ظاهرة':'غير معتمدة - مخفية'}</span>
+        <label class="toggle-switch">
+          <input type="checkbox" data-key="${it.key}" ${on?'checked':''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change', async ()=>{
+      state.releases[cb.dataset.key] = cb.checked;
+      await save();
+      renderReleaseTab();
+      toast(cb.checked ? 'تم اعتماد ونشر النتيجة' : 'تم إخفاء النتيجة عن أولياء الأمور');
+    });
+  });
+}
+const REPORT_PERIODS = [
+  {key:'m1', label:'الشهر الأول'}, {key:'m2', label:'الشهر الثاني'}, {key:'fasl1', label:'الفصل الأول'},
+  {key:'half', label:'نصف السنة'}, {key:'m3', label:'الشهر الثالث'}, {key:'m4', label:'الشهر الرابع'},
+  {key:'fasl2', label:'الفصل الثاني'}, {key:'saay', label:'السعي السنوي'}, {key:'final', label:'الدرجة النهائية'}
+];
+function periodCell(student, su, key, exemption){
+  const g = student.grades[su.id]||{};
+  switch(key){
+    case 'm1': case 'm2': case 'm3': case 'm4': case 'half': case 'notebook': return {v:num(g[key])};
+    case 'fasl1': return {v:calcFasl1(g)};
+    case 'fasl2': return {v:calcFasl2(g)};
+    case 'saay': return {v:calcSaay(g), mark: exemption.type==='فردي' && exemption.subjects.some(x=>x.id===su.id)};
+    case 'final': {
+      const fo = subjectFinal(student, su, exemption);
+      return fo.exempt ? {v:null, exempt:true} : {v:fo.value};
+    }
+  }
+  return {v:null};
+}
+function studentReportRow(st, key){
+  const ex = studentExemption(st);
+  const cells = state.subjects.map(su=> periodCell(st, su, key, ex));
+  const r = sumAvg(cells.map(c=>c.v));
+  let note = '', result = '';
+  if(key==='saay'){
+    if(ex.type==='عام') note = 'إعفاء عام';
+    else if(ex.type==='فردي') note = 'إعفاء فردي: ' + ex.subjects.map(x=>x.name).join('، ');
+  }
+  if(key==='final'){
+    const complete = ex.type==='عام' || cells.every(c=> c.exempt || c.v!==null);
+    if(complete){
+      const s2 = studentStatus(st); result = s2.status;
+      const parts = [];
+      if(ex.type==='عام') parts.push('إعفاء عام'); else if(ex.type==='فردي') parts.push('إعفاء فردي');
+      if(s2.status==='مكمل') parts.push('مكمل: ' + s2.failing.join('، '));
+      else if(s2.status==='راسب') parts.push('راسب (' + s2.failing.length + ' مواد دون 50)');
+      note = parts.join(' | ');
+    }
+  }
+  return {st, cells, sum:r.sum, avg:r.avg, note, result};
+}
+function renderReportPage(o){
+  const {sec, per, allRows, chunkRows, chunkIndex, chunkCount, landscape, startIndex} = o;
+  const subjects = state.subjects, key = per.key;
+  const hasSaay = key==='saay', hasFinal = key==='final';
+  const fs = subjects.length>12 ? 8 : subjects.length>9 ? 8.8 : 9.5;
+  const isLast = (o.isLast !== undefined) ? o.isLast : (chunkIndex === chunkCount-1);
+  const fmt = v => (v===null || v===undefined || isNaN(v)) ? '-' : v;
+  const low = v => (v!==null && v!==undefined && !isNaN(v) && v < 50) ? ' low' : '';
+  const extraCols = (hasFinal?2:0) + (hasSaay?1:0);
+  const body = chunkRows.map((r,i)=>{
+    const resCls = r.result==='ناجح' ? 'res-ok' : r.result==='مكمل' ? 'res-warn' : r.result==='راسب' ? 'res-fail' : '';
+    return `<tr><td>${startIndex+i+1}</td><td class="name">${escapeHtml(r.st.name)}</td><td>${escapeHtml(r.st.examNo||'-')}</td>
+      ${r.cells.map(c=> c.exempt ? '<td>معفى</td>' : `<td class="${(low(c.v)+(c.mark?' exm':'')).trim()}">${fmt(c.v)}</td>`).join('')}
+      <td class="tot">${fmt(r.sum)}</td><td class="tot${low(r.avg)}">${fmt(r.avg)}</td>
+      ${hasFinal ? `<td class="${resCls}">${escapeHtml(r.result||'-')}</td><td class="note">${escapeHtml(r.note||'')}</td>` : ''}
+      ${hasSaay ? `<td class="note">${escapeHtml(r.note||'')}</td>` : ''}</tr>`;
+  }).join('');
+  let tfoot = '';
+  if(isLast){
+    const colAvg = subjects.map((su,j)=> sumAvg(allRows.map(r=>r.cells[j].v)).avg);
+    const sumAvgAll = sumAvg(allRows.map(r=>r.sum)).avg;
+    const avgAvgAll = sumAvg(allRows.map(r=>r.avg)).avg;
+    tfoot = `<tfoot><tr><td colspan="3">معدل الشعبة</td>${colAvg.map(v=>`<td>${fmt(v)}</td>`).join('')}
+      <td>${fmt(sumAvgAll)}</td><td>${fmt(avgAvgAll)}</td>${extraCols?`<td colspan="${extraCols}"></td>`:''}</tr></tfoot>`;
+  }
+  const sigs = isLast
+    ? `<div class="a4-sigs"><div>مدرّس الصف</div><div>لجنة الامتحانات</div><div>مدير المدرسة</div></div>`
+    : '';
+  return `<div class="a4-page ${landscape?'land':''}"><div class="a4-frame">
+    <div class="a4-head">
+      <div class="school">${escapeHtml(state.schoolName || 'اسم المدرسة')}</div>
+      ${state.academicYear ? `<div class="sub">العام الدراسي ${escapeHtml(state.academicYear)}</div>` : ''}
+    </div>
+    <div class="a4-title">نتائج ${escapeHtml(per.label)}</div>
+    <div class="a4-info">
+      <span>المرحلة: <b>${escapeHtml(state.stage||'-')}</b></span>
+      <span>الصف: <b>${sec?escapeHtml(sec.grade):'-'}</b></span>
+      <span>الشعبة: <b>${sec?escapeHtml(sec.name):'-'}</b></span>
+      <span>عدد الطلاب: <b>${allRows.length}</b></span>
+    </div>
+    <table class="a4-table" style="font-size:${fs}pt;">
+      <thead><tr><th style="width:8mm;">ت</th><th>اسم الطالب</th><th>الرقم الامتحاني</th>
+        ${subjects.map(su=>`<th>${escapeHtml(su.name)}</th>`).join('')}
+        <th>المجموع</th><th>المعدل</th>
+        ${hasFinal ? '<th>النتيجة</th><th>ملاحظات</th>' : ''}${hasSaay ? '<th>ملاحظات</th>' : ''}</tr></thead>
+      <tbody>${body}</tbody>${tfoot}
+    </table>
+    <div class="a4-foot">
+      ${sigs}
+      <div class="a4-pageno"><span>تاريخ الطباعة: ${todayStr()}</span><span>صفحة ${chunkIndex+1} من ${chunkCount}</span></div>
+    </div>
+  </div></div>`;
+}
+function fitRows(allRows, mkPage){
+  const probe = document.createElement('div');
+  probe.style.cssText = 'position:absolute; left:-100000px; top:0; visibility:hidden; pointer-events:none;';
+  document.body.appendChild(probe);
+  const overflows = rows=>{
+    probe.innerHTML = mkPage(rows);
+    const fr = probe.querySelector('.a4-frame'), ft = probe.querySelector('.a4-foot');
+    const pad = parseFloat(getComputedStyle(fr).paddingBottom) || 0;
+    const limit = fr.getBoundingClientRect().bottom - pad - 8;
+    return fr.scrollHeight > fr.clientHeight + 1 || ft.getBoundingClientRect().bottom > limit + pad;
+  };
+  const chunks = []; let cur = [];
+  for(const r of allRows){
+    cur.push(r);
+    if(cur.length > 1 && overflows(cur)){ cur.pop(); chunks.push(cur); cur = [r]; }
+  }
+  if(cur.length) chunks.push(cur);
+  probe.remove();
+  return chunks;
+}
+let lastReportLandscape = false;
+function renderPeriodReports(){
+  const secVal = document.getElementById('repSection').value;
+  const perVal = document.getElementById('repPeriod').value;
+  const orient = document.getElementById('repOrient').value;
+  const wrap = document.getElementById('monthlyReportWrap');
+  if(!state.sections.length){ wrap.innerHTML = '<div class="empty">أضف شعبة وطلابًا أولاً</div>'; return false; }
+  if(!state.subjects.length){ wrap.innerHTML = '<div class="empty">أضف المواد الدراسية أولاً من تبويب الإعدادات</div>'; return false; }
+  const secIds = secVal ? [secVal] : state.sections.map(s=>s.id);
+  const keys = perVal==='all' ? REPORT_PERIODS.map(p=>p.key) : [perVal];
+  let landscape = orient==='land';
+  if(orient==='auto'){
+    const cap = Math.min(...keys.map(k=> k==='final' ? 3 : k==='saay' ? 4 : 6));
+    landscape = state.subjects.length > cap;
+  }
+  lastReportLandscape = landscape;
+  const pages = [];
+  secIds.forEach(secId=>{
+    const sec = state.sections.find(s=>s.id===secId);
+    const students = state.students.filter(s=>s.sectionId===secId);
+    if(!students.length) return;
+    keys.forEach(key=>{
+      const per = REPORT_PERIODS.find(p=>p.key===key);
+      const allRows = students.map(st=> studentReportRow(st, key));
+      const base = {sec, per, allRows, landscape};
+      const chunks = fitRows(allRows, rows=> renderReportPage(Object.assign({}, base, {chunkRows:rows, chunkIndex:0, chunkCount:1, startIndex:0, isLast:true})));
+      let offset = 0;
+      chunks.forEach((rows,ci)=>{
+        pages.push(renderReportPage(Object.assign({}, base, {chunkRows:rows, chunkIndex:ci, chunkCount:chunks.length, startIndex:offset})));
+        offset += rows.length;
+      });
+    });
+  });
+  if(!pages.length){ wrap.innerHTML = '<div class="empty">لا يوجد طلاب في الشعبة المختارة</div>'; return false; }
+  wrap.innerHTML = `<div class="a4-wrap">${pages.join('')}</div>`;
+  return true;
+}
+function printWithMode(mode, landscape){
+  document.body.dataset.print = mode;
+  let st = document.getElementById('printPageStyle');
+  if(!st){ st = document.createElement('style'); st.id = 'printPageStyle'; document.head.appendChild(st); }
+  st.textContent = (mode==='period' || mode==='cert')
+    ? `@page{size:A4 ${landscape?'landscape':'portrait'}; margin:0;}`
+    : '@page{size:A4 portrait; margin:10mm;}';
+  const cleanup = ()=>{ delete document.body.dataset.print; st.textContent = ''; window.removeEventListener('afterprint', cleanup); };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+}
+document.getElementById('btnMonthlyReport').addEventListener('click', renderPeriodReports);
+document.getElementById('btnPrint1').addEventListener('click', ()=>{ if(renderPeriodReports()) printWithMode('period', lastReportLandscape); });
+document.getElementById('btnPrint2').addEventListener('click', ()=> printWithMode('results', false));
+
+document.getElementById('btnResultsReport').addEventListener('click', ()=>{
+  const sectionId = document.getElementById('resSection').value;
+  const wrap = document.getElementById('resultsReportWrap');
+  if(!sectionId){ wrap.innerHTML = '<div class="empty">اختر الشعبة</div>'; return; }
+  const sec = state.sections.find(s=>s.id===sectionId);
+  const list = state.students.filter(s=>s.sectionId===sectionId);
+  if(!list.length){ wrap.innerHTML = '<div class="empty">لا يوجد طلاب في هذه الشعبة</div>'; return; }
+  wrap.innerHTML = `
+    <h3 style="font-family:'Amiri',serif;">كشف النتائج النهائي - الشعبة: ${escapeHtml(sec.name)} (${escapeHtml(sec.grade)})</h3>
+    <table><thead><tr><th>الاسم</th><th>رقم القيد</th><th>المعدل العام</th><th>أقل درجة</th><th>الحالة</th><th>ملاحظات</th></tr></thead>
+    <tbody>${list.map(s=>{
+      const overall = studentOverallAvg(s);
+      const minS = studentMinSaay(s);
+      const st = studentStatus(s);
+      const tagClass = st.status==='ناجح'?'pass':(st.status==='مكمل'?'warn':'fail');
+      return `<tr><td style="text-align:right;">${escapeHtml(s.name)}</td><td>${escapeHtml(s.regNo||'-')}</td>
+      <td>${overall??'-'}</td><td>${minS??'-'}</td>
+      <td><span class="tag ${tagClass}">${st.status}</span></td>
+      <td class="note-cell" style="text-align:right;">${escapeHtml(st.note||'-')}</td></tr>`;
+    }).join('')}</tbody></table>
+  `;
+});
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str==null?'':String(str);
+  return d.innerHTML;
+}
+
+/* ---------- id cards ---------- */
+function renderIdCardsGrid(){
+  const sectionId = document.getElementById('idSection').value;
+  const grid = document.getElementById('idCardsGrid');
+  const list = state.students.filter(s=> !sectionId || s.sectionId===sectionId);
+  if(!list.length){ grid.innerHTML = '<div class="empty">لا يوجد طلاب لعرض بطاقاتهم</div>'; return; }
+  grid.innerHTML = list.map(s=>{
+    const sec = sectionOf(s);
+    const photoHtml = s.photo
+      ? `<img class="photo" src="${s.photo}" alt="">`
+      : `<div class="photo-placeholder">👤</div>`;
+    return `<div class="idcard-pair">
+      <div class="idcard idcard-front">
+        <div class="band">
+          <span>${escapeHtml(state.schoolName || 'بطاقة هوية طالب')}</span>
+          <span class="stagepill">${escapeHtml(state.stage||'-')}</span>
+        </div>
+        <div class="body">
+          ${photoHtml}
+          <div class="info">
+            <div class="name">${escapeHtml(s.name)}</div>
+            <div class="line">الصف: ${sec?escapeHtml(sec.grade):'-'}</div>
+            <div class="line">الشعبة: ${sec?escapeHtml(sec.name):'-'}</div>
+            <div class="line">الرقم الامتحاني: ${escapeHtml(s.examNo||'-')}</div>
+          </div>
+        </div>
+      </div>
+      <div class="idcard idcard-back">
+        <div class="backlabel">بيانات الدخول</div>
+        <div class="qr-wrap"><div id="bar-${s.id}"></div></div>
+        <div class="creds">مستخدم: <b>${escapeHtml(s.username||'-')}</b><br>كلمة المرور: <b>${escapeHtml(s.password||'-')}</b></div>
+      </div>
+    </div>`;
+  }).join('');
+  loadBarcodeLib().then(ok=>{
+    if(!ok){ toast('تعذر تحميل مكتبة رمز QR (يحتاج اتصال إنترنت أول مرة فقط)'); return; }
+    const base = (state.portalUrl || '').trim();
+    list.forEach(s=>{
+      try{
+        const el = document.getElementById('bar-'+s.id);
+        el.innerHTML = '';
+        const value = base ? (base + (base.includes('?') ? '&' : '?') + 'id=' + encodeURIComponent(s.id)) : s.id;
+        new QRCode(el, { text: value, width:88, height:88, correctLevel: QRCode.CorrectLevel.M });
+      }catch(e){}
+    });
+    if(!base) toast('تنبيه: لم تحدد رابط البوابة بعد من تبويب الإعدادات، فالرمز حاليًا نص فقط');
+  });
+}
+document.getElementById('btnGenCards').addEventListener('click', renderIdCardsGrid);
+document.getElementById('btnPrintCards').addEventListener('click', ()=> window.print());
+
+/* ---------- search ---------- */
+function renderSearchResults(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const wrap = document.getElementById('searchResultsList');
+  if(!q){ wrap.innerHTML = ''; return; }
+  const matches = state.students.filter(s=>
+    (s.name||'').toLowerCase().includes(q) ||
+    (s.regNo||'').toLowerCase().includes(q) ||
+    (s.examNo||'').toLowerCase().includes(q) ||
+    (s.username||'').toLowerCase().includes(q)
+  );
+  if(!matches.length){ wrap.innerHTML = '<div class="empty">لا يوجد طالب مطابق</div>'; return; }
+  wrap.innerHTML = `<div class="pill-list" style="margin-top:10px;">${matches.map(s=>{
+    const sec = sectionOf(s);
+    return `<div class="pill" style="cursor:pointer;" data-sid="${s.id}">${escapeHtml(s.name)} ${sec?('- '+escapeHtml(sec.name)):''}</div>`;
+  }).join('')}</div>`;
+  wrap.querySelectorAll('.pill').forEach(p=>{
+    p.addEventListener('click', ()=> renderSearchProfile(p.dataset.sid));
+  });
+}
+document.getElementById('searchInput').addEventListener('input', renderSearchResults);
+
+function sumAvg(values){
+  const valid = values.filter(v=> v!==null && v!==undefined && !isNaN(v));
+  if(!valid.length) return {sum:null, avg:null};
+  const sum = valid.reduce((a,b)=>a+Number(b),0);
+  return {sum: Math.round(sum*100)/100, avg: Math.round((sum/valid.length)*100)/100};
+}
+function renderTotalAvgRows(student, exemption){
+  const cols = ['m1','m2','fasl1','half','m3','m4','fasl2','notebook','saay','final'];
+  const values = {m1:[],m2:[],fasl1:[],half:[],m3:[],m4:[],fasl2:[],notebook:[],saay:[],final:[]};
+  state.subjects.forEach(su=>{
+    const g = student.grades[su.id]||{};
+    const fo = subjectFinal(student, su, exemption);
+    values.m1.push(num(g.m1)); values.m2.push(num(g.m2));
+    values.fasl1.push(calcFasl1(g)); values.half.push(num(g.half));
+    values.m3.push(num(g.m3)); values.m4.push(num(g.m4));
+    values.fasl2.push(calcFasl2(g)); values.notebook.push(num(g.notebook));
+    values.saay.push(calcSaay(g)); values.final.push(fo.value);
+  });
+  const totals = {}, avgs = {};
+  cols.forEach(c=>{ const r = sumAvg(values[c]); totals[c]=r.sum; avgs[c]=r.avg; });
+  return `
+    <tr style="font-weight:700; background:#F3EEE0;">
+      <td style="text-align:right;">المجموع</td>
+      ${cols.map(c=>`<td>${totals[c]??'-'}</td>`).join('')}
+    </tr>
+    <tr style="font-weight:700; background:#F3EEE0;">
+      <td style="text-align:right;">المعدل</td>
+      ${cols.map(c=>`<td>${avgs[c]??'-'}</td>`).join('')}
+    </tr>
+  `;
+}
+function renderSearchProfile(studentId){
+  const student = state.students.find(s=>s.id===studentId);
+  if(!student) return;
+  const sec = sectionOf(student);
+  const exemption = studentExemption(student);
+  const st = studentStatus(student);
+  const tagClass = st.status==='ناجح'?'pass':(st.status==='مكمل'?'warn':'fail');
+  const dates = studentAbsenceDates(student);
+  const wrap = document.getElementById('searchProfileWrap');
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="row" style="align-items:center; gap:16px;">
+        <img id="profilePhotoImg" src="${student.photo || ''}" style="width:80px; height:80px; border-radius:10px; object-fit:cover; background:#eee; border:1px solid var(--line); ${student.photo?'':'display:none;'}">
+        <div style="flex:1;">
+          <h2 style="margin-bottom:6px;">${escapeHtml(student.name)}</h2>
+          <div class="row" style="gap:20px; font-size:.88rem; color:var(--ink-soft);">
+            <span>المرحلة: ${escapeHtml(state.stage||'-')}</span>
+            <span>الصف/الشعبة: ${sec?escapeHtml(sec.grade+' - '+sec.name):'-'}</span>
+            <span>رقم القيد: ${escapeHtml(student.regNo||'-')}</span>
+            <span>الرقم الامتحاني: ${escapeHtml(student.examNo||'-')}</span>
+            <span>مستخدم: ${escapeHtml(student.username||'-')}</span>
+            <span>كلمة المرور: ${escapeHtml(student.password||'-')}</span>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px; align-items:center;">
+        <div class="field"><label>${student.photo ? 'تغيير صورة الطالب' : 'إضافة صورة الطالب'}</label><input type="file" accept="image/*" id="profilePhotoInput"></div>
+        <button class="btn small" id="btnSavePhoto">حفظ الصورة</button>
+        <button class="btn small" id="btnProfileCert">عرض الشهادة وطباعتها</button>
+      </div>
+      <p style="margin-top:10px;">الحالة: <span class="tag ${tagClass}">${st.status}</span> <span style="font-size:.82rem; color:var(--ink-soft);">${escapeHtml(st.note||'')}</span></p>
+    </div>
+
+    <div class="card">
+      <h2>الدرجات</h2>
+      <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>المادة</th><th>الشهر1</th><th>الشهر2</th><th>الفصل1</th><th>نصف السنة</th>
+        <th>الشهر3</th><th>الشهر4</th><th>الفصل2</th><th>درجة الدفتر</th><th>السعي</th><th>النهائي</th>
+      </tr></thead>
+      <tbody>${state.subjects.map(su=>{
+        const g = student.grades[su.id]||{};
+        const fo = subjectFinal(student, su, exemption);
+        return `<tr><td style="text-align:right;">${escapeHtml(su.name)}</td>
+        <td>${g.m1??'-'}</td><td>${g.m2??'-'}</td><td>${calcFasl1(g)??'-'}</td>
+        <td>${g.half??'-'}</td><td>${g.m3??'-'}</td><td>${g.m4??'-'}</td>
+        <td>${calcFasl2(g)??'-'}</td><td>${g.notebook??'-'}</td><td>${calcSaay(g)??'-'}</td><td>${fo.display}</td></tr>`;
+      }).join('')}
+      ${renderTotalAvgRows(student, exemption)}
+      </tbody></table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>الغياب</h2>
+      <p>إجمالي أيام الغياب: <strong>${dates.length}</strong></p>
+      ${dates.length ? `<table><thead><tr><th>#</th><th>التاريخ</th></tr></thead>
+      <tbody>${dates.map((d,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(d)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">لا يوجد غياب مسجّل</div>'}
+    </div>
+    <div class="card">
+      <h2>التبليغات والمخالفات</h2>
+      ${(()=>{
+        const ns = (state.notices||[]).filter(n=>n.studentId===student.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        return ns.length ? `<table><thead><tr><th>التاريخ</th><th>النوع</th><th>العنوان</th><th>التفاصيل</th></tr></thead>
+        <tbody>${ns.map(n=>`<tr><td>${escapeHtml(n.date)}</td><td><span class="tag ${n.type==='مخالفة'?'fail':'notice'}">${escapeHtml(n.type)}</span></td><td style="text-align:right;">${escapeHtml(n.title)}</td><td style="text-align:right; white-space:pre-wrap;">${escapeHtml(n.details||'')}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">لا توجد تبليغات أو مخالفات</div>';
+      })()}
+    </div>
+  `;
+  document.getElementById('btnProfileCert').addEventListener('click', ()=>{
+    document.querySelector('nav button[data-tab="certs"]').click();
+    const stSec = sectionOf(student);
+    document.getElementById('certGrade').value = stSec ? stSec.grade : '';
+    fillCertSections(student.sectionId);
+    fillCertStudents(student.id);
+    renderCerts();
+  });
+  document.getElementById('btnSavePhoto').addEventListener('click', async ()=>{
+    const file = document.getElementById('profilePhotoInput').files[0];
+    if(!file){ toast('اختر صورة أولاً'); return; }
+    try{
+      const photo = await resizeImageFile(file, 240);
+      student.photo = photo;
+      await save();
+      renderSearchProfile(studentId);
+      toast('تم حفظ الصورة');
+    }catch(e){
+      toast('تعذر معالجة الصورة');
+    }
+  });
+}
+
+/* ---------- student portal ---------- */
+function renderTotalAvgRowReleased(student, exemption, rel){
+  const m1s=[], m2s=[], f1s=[], halfs=[], m3s=[], m4s=[], f2s=[], saays=[], finals=[];
+  const saayReady = !!rel.saay;
+  state.subjects.forEach(su=>{
+    const g = student.grades[su.id]||{};
+    const fo = subjectFinal(student, su, exemption);
+    if(rel.m1) m1s.push(num(g.m1));
+    if(rel.m2) m2s.push(num(g.m2));
+    if(rel.fasl1) f1s.push(calcFasl1(g));
+    if(rel.half) halfs.push(num(g.half));
+    if(rel.m3) m3s.push(num(g.m3));
+    if(rel.m4) m4s.push(num(g.m4));
+    if(rel.fasl2) f2s.push(calcFasl2(g));
+    if(saayReady) saays.push(calcSaay(g));
+    if(saayReady && rel.notebook) finals.push(fo.value);
+  });
+  const cols = [m1s,m2s,f1s,halfs,m3s,m4s,f2s,saays,finals].map(sumAvg);
+  return `<tr style="font-weight:700; background:#F3EEE0;"><td style="text-align:right;">المجموع</td>${cols.map(c=>`<td>${c.sum??'-'}</td>`).join('')}</tr>
+    <tr style="font-weight:700; background:#F3EEE0;"><td style="text-align:right;">المعدل</td>${cols.map(c=>`<td>${c.avg??'-'}</td>`).join('')}</tr>`;
+}
+document.getElementById('portalForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const user = document.getElementById('portalUser').value.trim();
+  const pass = document.getElementById('portalPass').value.trim();
+  const resultBox = document.getElementById('portalResult');
+  const student = state.students.find(s=> s.username===user && s.password===pass);
+  if(!student){
+    resultBox.style.display='block';
+    resultBox.innerHTML = '<p style="color:var(--red);">اسم المستخدم أو كلمة المرور غير صحيحة.</p>';
+    return;
+  }
+  const sec = sectionOf(student);
+  const exemption = studentExemption(student);
+  const st = studentStatus(student);
+  const tagClass = st.status==='ناجح'?'pass':(st.status==='مكمل'?'warn':'fail');
+  const absDates = studentAbsenceDates(student);
+  const rel = normalizeReleases(state.releases);
+  const NR = 'لم تُعتمد';
+  const saayReady = !!rel.saay;
+  const allReleased = saayReady && rel.notebook;
+  const myNotices = (state.notices||[]).filter(n=>n.studentId===student.id)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0));
+  const posts = (state.lessonPosts||[]).filter(p=>p.sectionId===student.sectionId)
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||''));
+  const sep = 'border-top:1px dashed var(--line); margin-top:16px; padding-top:14px;';
+  resultBox.style.display='block';
+  resultBox.innerHTML = `
+    <h2 style="font-family:'Amiri',serif;">${escapeHtml(student.name)}</h2>
+    <div class="icard-row">الصف/الشعبة: ${sec?escapeHtml(sec.grade+' - '+sec.name):'-'}</div>
+
+    <div style="${sep}">
+      <h2>📅 الغياب</h2>
+      <div class="icard-row">إجمالي أيام الغياب: <strong>${absDates.length}</strong></div>
+      ${absDates.length ? `<table><thead><tr><th>#</th><th>تاريخ الغياب</th></tr></thead>
+      <tbody>${absDates.map((d,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(d)}</td></tr>`).join('')}</tbody></table>` : '<p style="font-size:.85rem; color:var(--ink-soft);">لا يوجد أي غياب مسجّل.</p>'}
+    </div>
+
+    <div style="${sep}">
+      <h2>⚠️ التبليغات والمخالفات</h2>
+      ${myNotices.length ? myNotices.map(n=>`
+        <div style="border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-bottom:10px; background:#fffdf7;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <span style="font-weight:700; font-family:'Amiri',serif;">${escapeHtml(n.title)}</span>
+            <span class="tag ${n.type==='مخالفة'?'fail':'notice'}">${escapeHtml(n.type)}</span>
+          </div>
+          <div style="font-size:.75rem; color:var(--ink-soft); margin:4px 0 6px;">${escapeHtml(n.date)}</div>
+          ${n.details ? `<div style="font-size:.88rem; white-space:pre-wrap;">${escapeHtml(n.details)}</div>` : ''}
+        </div>`).join('') : '<p style="font-size:.85rem; color:var(--ink-soft);">لا توجد تبليغات أو مخالفات.</p>'}
+    </div>
+
+    <div style="${sep}">
+      <h2>📊 الدرجات</h2>
+      <div style="overflow-x:auto;">
+      <table><thead><tr>
+        <th>المادة</th><th>الشهر1</th><th>الشهر2</th><th>الفصل الأول</th><th>نصف السنة</th>
+        <th>الشهر3</th><th>الشهر4</th><th>الفصل الثاني</th><th>السعي</th><th>النهائي</th>
+      </tr></thead>
+      <tbody>${state.subjects.map(su=>{
+        const g = student.grades[su.id]||{};
+        const fo = subjectFinal(student, su, exemption);
+        return `<tr><td style="text-align:right;">${escapeHtml(su.name)}</td>
+        <td>${rel.m1 ? (num(g.m1)??'-') : NR}</td><td>${rel.m2 ? (num(g.m2)??'-') : NR}</td>
+        <td>${rel.fasl1 ? (calcFasl1(g)??'-') : NR}</td><td>${rel.half ? (num(g.half)??'-') : NR}</td>
+        <td>${rel.m3 ? (num(g.m3)??'-') : NR}</td><td>${rel.m4 ? (num(g.m4)??'-') : NR}</td>
+        <td>${rel.fasl2 ? (calcFasl2(g)??'-') : NR}</td><td>${saayReady ? (calcSaay(g)??'-') : NR}</td>
+        <td>${allReleased ? fo.display : NR}</td></tr>`;
+      }).join('')}
+      ${renderTotalAvgRowReleased(student, exemption, rel)}
+      </tbody></table>
+      </div>
+      ${allReleased ? `<p style="margin-top:12px;">الحالة: <span class="tag ${tagClass}">${st.status}</span></p>
+      <p style="font-size:.85rem; color:var(--ink-soft);">${escapeHtml(st.note||'')}</p>`
+      : '<p style="margin-top:12px; font-size:.85rem; color:var(--ink-soft);">الحالة النهائية تظهر بعد اعتماد السعي السنوي ودرجة الدفتر من إدارة المدرسة.</p>'}
+    </div>
+
+    <div style="${sep}">
+      <h2>📚 التحضيرات</h2>
+      ${posts.length ? posts.map(pp=>{
+        const sub = state.subjects.find(x=>x.id===pp.subjectId);
+        return `<div style="border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-bottom:10px; background:#fffdf7;">
+          <div style="font-weight:700; font-family:'Amiri',serif;">${escapeHtml(pp.title)}</div>
+          <div style="font-size:.75rem; color:var(--ink-soft); margin:4px 0 8px;">${sub?escapeHtml(sub.name):''} — ${escapeHtml(pp.date)}</div>
+          <div style="font-size:.88rem; white-space:pre-wrap;">${escapeHtml(pp.content)}</div>
+        </div>`;
+      }).join('') : '<p style="font-size:.85rem; color:var(--ink-soft);">لا توجد تحضيرات منشورة بعد.</p>'}
+    </div>
+  `;
+});
+
+/* ---------- export / import ---------- */
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'بيانات_الدرجات.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('تم تصدير البيانات');
+});
+document.getElementById('btnImport').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+function mergeImportedData(parsed){
+  if(!state.stage && parsed.stage) state.stage = parsed.stage;
+
+  const subjectIdMap = {};
+  (parsed.subjects||[]).forEach(su=>{
+    const existing = state.subjects.find(x=> x.name.trim() === (su.name||'').trim());
+    if(existing){ subjectIdMap[su.id] = existing.id; }
+    else{
+      const nu = {id: uid('subj'), name: su.name};
+      state.subjects.push(nu);
+      subjectIdMap[su.id] = nu.id;
+    }
+  });
+
+  const sectionIdMap = {};
+  (parsed.sections||[]).forEach(se=>{
+    const existing = state.sections.find(x=> x.name.trim()===(se.name||'').trim() && x.grade===se.grade);
+    if(existing){ sectionIdMap[se.id] = existing.id; }
+    else{
+      const nu = {id: uid('sec'), name: se.name, grade: se.grade};
+      state.sections.push(nu);
+      sectionIdMap[se.id] = nu.id;
+    }
+  });
+
+  (parsed.students||[]).forEach(st=>{
+    const mappedSectionId = sectionIdMap[st.sectionId] || st.sectionId;
+    let existing = null;
+    if(st.username) existing = state.students.find(x=> x.username === st.username);
+    if(!existing) existing = state.students.find(x=> x.name.trim()===(st.name||'').trim() && x.sectionId===mappedSectionId);
+
+    const remappedGrades = {};
+    Object.keys(st.grades||{}).forEach(oldSubId=>{
+      const newSubId = subjectIdMap[oldSubId] || oldSubId;
+      remappedGrades[newSubId] = st.grades[oldSubId];
+    });
+
+    let targetId;
+    if(existing){
+      existing.regNo = existing.regNo || st.regNo;
+      existing.examNo = existing.examNo || st.examNo;
+      existing.username = existing.username || st.username;
+      existing.password = existing.password || st.password;
+      Object.keys(remappedGrades).forEach(subId=>{
+        if(!existing.grades[subId]) existing.grades[subId] = {};
+        const incoming = remappedGrades[subId] || {};
+        Object.keys(incoming).forEach(field=>{
+          const v = incoming[field];
+          if(v!==undefined && v!==null && v!==''){
+            existing.grades[subId][field] = v;
+          }
+        });
+      });
+      targetId = existing.id;
+    } else {
+      const newStu = {
+        id: uid('stu'), name: st.name, regNo: st.regNo, examNo: st.examNo,
+        sectionId: mappedSectionId,
+        username: st.username || genUsername(st.name),
+        password: st.password || genPassword(),
+        grades: remappedGrades
+      };
+      state.students.push(newStu);
+      targetId = newStu.id;
+    }
+    const incomingNotices = (parsed.notices || []).filter(n=>n.studentId===st.id);
+    incomingNotices.forEach(n=>{
+      if(!state.notices) state.notices = [];
+      if(!state.notices.some(x=>x.id===n.id)) state.notices.push(Object.assign({}, n, {studentId: targetId}));
+    });
+    const incomingDates = (parsed.attendance && parsed.attendance[st.id]) || [];
+    if(incomingDates.length){
+      if(!state.attendance[targetId]) state.attendance[targetId] = [];
+      incomingDates.forEach(d=>{
+        if(!state.attendance[targetId].includes(d)) state.attendance[targetId].push(d);
+      });
+    }
+  });
+}
+
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      mergeImportedData(parsed);
+      await save();
+      renderAll();
+      toast('تم دمج البيانات المستوردة بدون حذف أي بيانات حالية');
+    }catch(err){
+      toast('ملف غير صالح');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ---------- master render ---------- */
+function renderAll(){
+  if(!loaded) return;
+  document.getElementById('portalUrlInput').value = state.portalUrl || '';
+  document.getElementById('schoolNameInput').value = state.schoolName || '';
+  document.getElementById('academicYearInput').value = state.academicYear || '';
+  document.getElementById('directorateInput').value = state.directorate || '';
+  renderSchoolLogoPreview();
+  renderCertControls();
+  renderStagePicker();
+  renderSubjectsList();
+  refreshSectionGradeOptions();
+  renderSectionsList();
+
+  fillSectionSelect(document.getElementById('stuSection'), false);
+  fillSectionSelect(document.getElementById('viewSection'), true);
+  fillSectionSelect(document.getElementById('gradeSection'), false);
+  fillSectionSelect(document.getElementById('repSection'), true);
+  fillSectionSelect(document.getElementById('resSection'), false);
+  fillSectionSelect(document.getElementById('idSection'), true);
+  fillSectionSelect(document.getElementById('attSection'), false);
+  if(!document.getElementById('attDate').value) document.getElementById('attDate').value = todayStr();
+  renderAttendanceTab();
+  renderNoticesTab();
+  renderReleaseTab();
+
+  document.getElementById('gradeSubject').innerHTML = state.subjects.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+
+  renderStudentsTable();
+  renderTeachersList();
+  renderGradesTable();
+}
+
+document.getElementById('viewSection').addEventListener('change', renderStudentsTable);
+document.getElementById('gradeSection').addEventListener('change', renderGradesTable);
+document.getElementById('gradeSubject').addEventListener('change', renderGradesTable);
+
+load();
+</script>
+</body>
+</html>
